@@ -1,0 +1,22 @@
+# Core
+python-chess>=1.10.0
+torch>=2.0.0
+torchvision>=0.15.0
+numpy>=1.24.0
+
+# Data processing
+pandas>=2.0.0
+zstandard>=0.21.0
+
+# Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+jupyter>=1.0.0
+nbformat>=5.9.0
+
+# Engine integration
+stockfish>=3.28.0
+
+# Utilities
+tqdm>=4.65.0
+pyyaml>=6.0
