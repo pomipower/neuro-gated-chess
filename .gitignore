@@ -1,0 +1,55 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# PyTorch model weights (share via release/drive; record SHA-256 in docs/ARTIFACTS.md)
+*.pt
+*.pth
+*.ckpt
+
+# Large data (NOT committed)
+data/raw/*
+!data/raw/.gitkeep
+data/processed/
+# Small, reproducibility-critical data and all result CSVs ARE committed:
+#   data/benchmark/  (position lists, openings, puzzle sample)
+#   data/results/    (benchmark_moves.csv, games.csv, moves.csv, ratings.csv, config + env snapshots)
+
+# Third-party code checked out locally (LayaChess)
+third_party/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# pytest
+.pytest_cache/
+
+# LaTeX build artifacts
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.synctex.gz
+paper/*.bbl
+paper/*.blg
+paper/*.fdb_latexmk
+paper/*.fls
+
+# Stockfish binary (but not our wrapper)
+stockfish
+stockfish.exe
+stockfish-*
+!src/engine/Stockfish.py
