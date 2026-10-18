@@ -55,7 +55,7 @@ mcts:
   simulations: 400            # raise to 800 only if the pilot timing allows
   c_puct: 1.5
   fpu_reduction: 0.2
-  prior_temperature: 0.3
+  prior_temperature: 0.01
   tree_reuse: false
 
 judge:                        # Stockfish used to score moves (not a competitor)
@@ -90,7 +90,7 @@ tournament:
   opening_eval_band_cp: 100
   max_plies: 300
   anchors:                    # set after the pilot (protocol §3); UCI_Elo range is 1320-3190
-    elos: [1500, 1700, 1900]
+    elos: [1320]
     movetime_ms: 100
     threads: 1
     hash_mb: 64

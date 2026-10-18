@@ -11,3 +11,5 @@ Also record here: pilot timings (seconds per position per agent, seconds per gam
 
 Pilot timing (2026-10-18, RTX 4060 Laptop, WSL2, torch 2.14.1+cu130, Stockfish 16, n=20 val positions):
 laya_only 392 ms/move (81 move scores/s); always_s2 1343 ms (laya 309 + search 1034); mcts_uniform 1092 ms. 400 simulations kept; full study sizes kept.
+| 2026-10-18 | Rohan | mcts.prior_temperature 0.3 -> 0.01 | Pilot: always_s2 lost 16/16 to SF anchors. Val sweep (150 val positions, 2025-10) ACPL: laya_only 108, mcts_uniform 258, always_s2 T=0.3/0.1/0.05/0.03/0.01 = 136/106/102/100/98. Chose lowest val ACPL. Gate thresholds unaffected (depend on Laya only). | No (validation only) |
+| 2026-10-18 | Rohan | Tournament anchors [1500,1700,1900] -> [1320]; add tier-2 round-robin among our agents | Pilot: laya_only scored 12.5% even vs UCI_Elo 1320 (Stockfish's minimum). Higher anchors give no information. Absolute Elo reported with one anchor (wide CI); agent comparison from the round-robin. | No (test-month openings used only to choose anchors) |
