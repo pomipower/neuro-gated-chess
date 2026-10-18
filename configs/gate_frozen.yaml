@@ -1,0 +1,16 @@
+# Written by scripts/calibrate_gate.py. Commit this file BEFORE any test-split run.
+confidence: top1_softmax
+temperature: 0.5
+tau:
+  '0.10': 0.048394673677494206
+  '0.25': 0.057581822578711174
+  '0.50': 0.08405002391600905
+  '0.75': 0.1713213093269189
+val_auroc: 0.6023279268849284
+val_n: 3000
+val_laya_acpl: 113.999
+val_good_rate: 0.47833333333333333
+calibration_run: calib_20261018_140728
+frozen_at: '2026-10-18T15:06:58'
+laya_model: datafreak/laya-chess
+laya_revision: null
