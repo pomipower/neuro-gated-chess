@@ -1,12 +1,16 @@
 # Core
-python-chess>=1.10.0
+chess>=1.10.0                 # PyPI name of python-chess: boards, move generation, UCI engine control (chess.engine)
 torch>=2.0.0
-torchvision>=0.15.0
 numpy>=1.24.0
 
 # Data processing
 pandas>=2.0.0
-zstandard>=0.21.0
+zstandard>=0.21.0             # Lichess .pgn.zst / puzzle .csv.zst
+pyyaml>=6.0                   # configs/*.yaml
+
+# Statistics and metrics
+scipy>=1.10.0                 # Elo fitting (scipy.optimize), bootstrap helpers
+scikit-learn>=1.3             # roc_auc_score
 
 # Visualization
 matplotlib>=3.7.0
@@ -14,9 +18,16 @@ seaborn>=0.12.0
 jupyter>=1.0.0
 nbformat>=5.9.0
 
-# Engine integration
-stockfish>=3.28.0
+# System 1 (Laya / LayaChess). LayaChess is NOT pip-installable: clone
+#   https://github.com/devroopsaha744/LayaChess  ->  third_party/LayaChess
+# and add third_party/LayaChess/engine to PYTHONPATH. Then install that repo's own
+# engine/requirements.txt (this pulls in transformers etc. at the versions it needs).
+# huggingface_hub>=0.20       # uncomment if you download checkpoints by hand
 
 # Utilities
 tqdm>=4.65.0
-pyyaml>=6.0
+
+# Tests
+pytest>=7.4
+
+# Stockfish itself is a separate binary: install it and put it on PATH (or set judge.path in the config).
