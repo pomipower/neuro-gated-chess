@@ -19,3 +19,13 @@ laya_only 392 ms/move (81 move scores/s); always_s2 1343 ms (laya 309 + search 1
 - Elo pooled over tour_1 + tour_t2a + tour_t2b (500 games).
 - scripts/explore_study_a.py added AFTER test results were seen: all EXP_* outputs are exploratory/post hoc and are reported as such. The frozen gate and all pre-registered analyses are unchanged.
 - 223/300 tier-2 games ended in threefold repetition (deterministic agents, no repetition avoidance); reported as a limitation.
+
+## 2026-10-19 v2 value net acceptance (before any fresh-set run)
+- Pre-specified rule (V2_PROTOCOL §3.1): dead-head rate < 1% AND val Spearman > v1. Result: Spearman 0.665 vs 0.619 (met);
+  dead-head 1.3% (not met). The dead-head metric was meant to detect constant outputs; with the v2 LeakyReLU head an
+  all-negative hidden layer no longer gives a constant output, and the constant-output rate is 0.0% (v1: 8.1%).
+  Decision: use the v2 net; the v1 net is evaluated anyway as the pre-planned ablation v2_full_oldnet.
+- v2 dev choice (V2_PROTOCOL §3.2), first 300 val positions: v2_full ACPL 75.3 (prior T=0.01) vs 68.8 (T=0.1) -> T=0.1.
+  Val (optimistic, also used for the choice): laya_only 116.9 ACPL / 17.7% blunders; v2_safe 77.4 / 11.7%; v2_full 68.8 / 10.0%.
+- v2 practice match (dev openings, 10 games vs sf_elo_1320): no errors, 73 s/game, v2_full 6.5/10. Not a result.
+- v2 frozen before any fresh-set run (tag v2-frozen).

@@ -29,7 +29,7 @@ from src.utils import load_config, load_gate_config, new_run_id, prepare_run_dir
 COLUMNS = ["run_id", "split", "pos_id", "fen", "ply", "phase", "n_legal", "sf_best_uci", "sf_score_cp",
            "sf_gap_cp", "agent", "move_uci", "system", "confidence", "cpl", "is_best", "wall_ms", "laya_ms",
            "search_ms", "laya_calls", "laya_moves_scored", "cnn_evals", "mcts_sims", "max_depth",
-           "mean_leaf_depth"]
+           "mean_leaf_depth", "critical", "safety_override", "special"]
 DEFAULT_AGENTS = ("laya_only", "always_s2", "mcts_uniform")
 
 
@@ -87,8 +87,12 @@ def main() -> None:
     agents = {a: build_agent(a, res) for a in agents_wanted}
     judge = StockfishJudge.from_config(cfg)
     new_file = not out_path.exists()
+    cols = COLUMNS
+    if not new_file:                                   # resume: keep the existing header (v1 files lack v2 columns)
+        with open(out_path, newline="") as fh:
+            cols = next(csv.reader(fh), COLUMNS)
     with open(out_path, "a", newline="") as fh:
-        writer = csv.DictWriter(fh, fieldnames=COLUMNS)
+        writer = csv.DictWriter(fh, fieldnames=cols, extrasaction="ignore")
         if new_file:
             writer.writeheader()
         for _, r in tqdm(pos.iterrows(), total=len(pos), desc=f"Study A {args.split} shard {k}/{n}"):
@@ -103,7 +107,7 @@ def main() -> None:
             laya_out = None
             for name in todo:
                 agent = agents[name]
-                if name == "always_s2" and laya_out is not None:
+                if (name == "always_s2" or name.startswith("v2_")) and laya_out is not None:
                     move, info, _, _ = agent.decide(board, laya_out=laya_out)    # reuse this position's Laya call
                 else:
                     move, info, out, _ = agent.decide(board)
@@ -117,7 +121,9 @@ def main() -> None:
                     "laya_ms": round(info.laya_ms, 2), "search_ms": round(info.search_ms, 2),
                     "laya_calls": info.laya_calls, "laya_moves_scored": info.laya_moves_scored,
                     "cnn_evals": info.cnn_evals, "mcts_sims": info.mcts_sims, "max_depth": info.max_depth,
-                    "mean_leaf_depth": round(info.mean_leaf_depth, 3)})
+                    "mean_leaf_depth": round(info.mean_leaf_depth, 3),
+                    "critical": getattr(info, "critical", ""), "safety_override": getattr(info, "safety_override", ""),
+                    "special": getattr(info, "special", "")})
             fh.flush()
     judge.close()
     res.close()

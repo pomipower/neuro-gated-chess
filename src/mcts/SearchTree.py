@@ -15,6 +15,13 @@ Key rules (do not change without updating the spec and docs/DEVIATIONS.md):
   limitation).
 - Backpropagation flips the sign at every ply.
 - Final move: most visits; ties -> higher Q -> higher prior. No Dirichlet noise, no tree reuse.
+
+v2 options (all default to None / off, so v1 behaviour is unchanged and its tests still pin it):
+- interior_prior_fn(board, moves) -> prior array for non-root nodes (instead of uniform).
+- leaf_adjust_fn(board, v_stm) -> v_stm, e.g. a quiescence (pending-captures) correction of the network value.
+- tb_probe(board) -> exact value for the side to move, or None (endgame tablebases); probed nodes are terminal.
+- search(..., repeat_moves, contempt): root moves that repeat an earlier game position are scored as a draw,
+  worth -contempt to the root mover (contempt > 0 when the mover is better and wants to avoid the draw).
 """
 
 from __future__ import annotations
@@ -80,9 +87,11 @@ class Node:
         self.visits = 0
         self.vsum = 0.0                           # summed value, this node's side-to-move perspective
 
-    def expand(self, prior: np.ndarray | None = None) -> None:
+    def expand(self, prior: np.ndarray | None = None, prior_fn: Callable | None = None) -> None:
         self.moves = list(self.board.legal_moves)
         n = len(self.moves)
+        if prior is None and prior_fn is not None:
+            prior = prior_fn(self.board, self.moves)
         self.prior = prior if prior is not None else np.full(n, 1.0 / n)
         self.N = np.zeros(n)
         self.W = np.zeros(n)
@@ -100,6 +109,9 @@ class SearchTree:
         c_puct: float = 1.5,
         fpu_reduction: float = 0.2,
         prior_temperature: float = 0.3,
+        interior_prior_fn: Callable[[chess.Board, list[chess.Move]], np.ndarray] | None = None,
+        leaf_adjust_fn: Callable[[chess.Board, float], float] | None = None,
+        tb_probe: Callable[[chess.Board], float | None] | None = None,
     ) -> None:
         if simulations < 1:
             raise ValueError("simulations must be >= 1")
@@ -108,13 +120,25 @@ class SearchTree:
         self.c_puct = c_puct
         self.fpu_reduction = fpu_reduction
         self.prior_temperature = prior_temperature
+        self.interior_prior_fn = interior_prior_fn
+        self.leaf_adjust_fn = leaf_adjust_fn
+        self.tb_probe = tb_probe
+
+    def _new_node(self, board: chess.Board) -> Node:
+        node = Node(board)
+        if node.terminal is None and self.tb_probe is not None:
+            node.terminal = self.tb_probe(board)
+        return node
 
     def _leaf_value(self, node: Node) -> tuple[float, bool]:
         """(value for the node's side to move, used_network)."""
         if node.terminal is not None:
             return node.terminal, False
         v = float(self.value_fn(node.board))
-        return (v if node.board.turn == chess.WHITE else -v), True
+        v = v if node.board.turn == chess.WHITE else -v
+        if self.leaf_adjust_fn is not None:
+            v = self.leaf_adjust_fn(node.board, v)
+        return v, True
 
     def _select(self, node: Node) -> int:
         n_visits = node.N
@@ -124,11 +148,12 @@ class SearchTree:
         return int(np.argmax(score))
 
     def search(
-        self, board: chess.Board, root_scores: dict[chess.Move, float] | None = None
+        self, board: chess.Board, root_scores: dict[chess.Move, float] | None = None,
+        repeat_moves: set[chess.Move] | None = None, contempt: float = 0.0,
     ) -> SearchResult:
         if board.is_game_over():
             raise ValueError("search() called on a finished game")
-        root = Node(board.copy(stack=False))
+        root = Node(board.copy(stack=False))         # the root is never a tablebase terminal (the agent probes first)
         v, used = self._leaf_value(root)
         cnn_evals = int(used)
         root.expand(root_prior(list(board.legal_moves), root_scores, self.prior_temperature))
@@ -146,7 +171,9 @@ class SearchTree:
                 if child is None:
                     b = node.board.copy(stack=False)
                     b.push(node.moves[a])
-                    child = Node(b)
+                    child = self._new_node(b)
+                    if node is root and repeat_moves and node.moves[a] in repeat_moves and child.terminal is None:
+                        child.terminal = contempt           # a draw: worth +contempt to the opponent (child's mover)
                     node.children[a] = child
                     node = child
                     break
@@ -154,7 +181,7 @@ class SearchTree:
             v, used = self._leaf_value(node)
             cnn_evals += int(used)
             if node.terminal is None and node.moves is None:
-                node.expand()
+                node.expand(prior_fn=self.interior_prior_fn)
             node.visits += 1
             node.vsum += v
             for parent, a in reversed(path):
