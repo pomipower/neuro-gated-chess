@@ -20,7 +20,7 @@ Key rules (do not change without updating the spec and docs/DEVIATIONS.md):
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable
 
 import chess
@@ -38,6 +38,8 @@ class SearchResult:
     cnn_evals: int           # non-terminal leaf evaluations
     max_depth: int
     mean_leaf_depth: float
+    q: dict[chess.Move, float] = field(default_factory=dict)      # mean value per root move, mover's view
+    pv: list[chess.Move] = field(default_factory=list)            # most-visited line from the root
 
 
 def terminal_value(board: chess.Board) -> float | None:
@@ -168,6 +170,11 @@ class SearchTree:
         q_edges = np.where(root.N > 0, root.W / np.maximum(root.N, 1), -np.inf)
         order = sorted(range(len(root.moves)), key=lambda i: (root.N[i], q_edges[i], root.prior[i]), reverse=True)
         best = order[0]
+        pv, node = [root.moves[best]], root.children.get(best)
+        while node is not None and node.moves is not None and node.N is not None and node.N.sum() > 0 and len(pv) < 8:
+            i = int(np.argmax(node.N))
+            pv.append(node.moves[i])
+            node = node.children.get(i)
         return SearchResult(
             move=root.moves[best],
             visits={m: int(n) for m, n in zip(root.moves, root.N)},
@@ -176,4 +183,6 @@ class SearchTree:
             cnn_evals=cnn_evals,
             max_depth=max_depth,
             mean_leaf_depth=depth_sum / self.simulations,
+            q={m: float(q_edges[i]) for i, m in enumerate(root.moves) if root.N[i] > 0},
+            pv=pv,
         )
