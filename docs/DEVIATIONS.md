@@ -38,3 +38,4 @@ laya_only 392 ms/move (81 move scores/s); always_s2 1343 ms (laya 309 + search 1
   revision used by every v1 and v2 run (config previously had revision: null).
 - POST HOC scrutiny of v2 (scripts/scrutinize_v2.py): critical gate vs random gate at the same 60% rate: +1.1 cp
   [-2.4, +4.7], not distinguishable; oracle at 60% = 52.6 ACPL. Median CPL 29 -> 16 (laya_only -> v2_full).
+- v3 started (docs/V3_PROTOCOL.md): learned gate, check extension, Laya look-ahead, classical baseline, 2 anchors; v3 test month 2025-02 (HF shard 23).
