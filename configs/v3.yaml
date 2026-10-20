@@ -130,7 +130,7 @@ v2:
   gate: critical
   sims_critical: 400
   sims_normal: 200
-  prior_temperature: null
+  prior_temperature: 0.1
   interior_prior_temperature: 1.0
   quiescence_leaf: true
   qleaf_scale: 0.25

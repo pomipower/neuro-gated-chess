@@ -29,7 +29,7 @@ V2_OVERRIDES: dict[str, Any] = {
         "gate": "critical",                                      # critical | always | never | confidence
         "sims_critical": 400,                                    # sharp positions (in check / hanging / capture)
         "sims_normal": 200,                                      # other critical positions (endgame, few moves)
-        "prior_temperature": None,                               # None = mcts.prior_temperature (v1-tuned); dev choice §3
+        "prior_temperature": 0.1,                               # None = mcts.prior_temperature (v1-tuned); dev choice §3
         "interior_prior_temperature": 1.0,
         "quiescence_leaf": True,
         "qleaf_scale": 0.25,                                     # value shift per pawn of resolved material

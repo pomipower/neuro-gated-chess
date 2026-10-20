@@ -42,3 +42,8 @@ laya_only 392 ms/move (81 move scores/s); always_s2 1343 ms (laya 309 + search 1
 - v3 started (docs/V3_PROTOCOL.md): learned gate, check extension, Laya look-ahead, classical baseline, 2 anchors; v3 test month 2025-02 (HF shard 23).
 - v3 dev decisions (docs/V3_PROTOCOL.md §1b): learned gate (logistic) trained; check extension and Laya look-ahead not adopted
   (look-ahead tested only as exploratory v3_look4). v3 frozen before any 2025-02 result (tag v3-frozen).
+- BUG FIX (v3 test): configs/v3.yaml was generated with prior_temperature null (= v1's 0.01) because a later code zip
+  overwrote the v2 dev choice (0.1) in scripts/make_v2_config.py. Symptom: search gain 1.5 cp vs ~12 cp on val/v2 test;
+  v2_always == v2_safe move on 92.8% of positions. The run (kept as v3_bench_T001_INVALID, gate test +0.5..0.7 cp, n.s.)
+  does not test the frozen settings. Fixed to 0.1 and Study A-v3 + tournaments re-run on the same 2025-02 sets with the
+  same frozen gate; nothing else changed. Both results are reported.
