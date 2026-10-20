@@ -42,7 +42,7 @@ train:
   device: cuda
 laya:
   model_name: datafreak/laya-chess
-  revision: null
+  revision: 9269e61202b2c3517fef1cdacea83c3c23b92961
   device: cuda
   confidence: margin
   temperature: 0.1

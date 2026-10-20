@@ -44,7 +44,7 @@ train:
 
 laya:
   model_name: datafreak/laya-chess
-  revision: null              # pin a Hugging Face commit hash once chosen
+  revision: 9269e61202b2c3517fef1cdacea83c3c23b92961              # pin a Hugging Face commit hash once chosen
   device: cuda
   confidence: margin          # overwritten by configs/gate_frozen.yaml after calibration
   temperature: 0.1

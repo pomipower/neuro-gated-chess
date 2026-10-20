@@ -34,3 +34,7 @@ laya_only 392 ms/move (81 move scores/s); always_s2 1343 ms (laya 309 + search 1
   included in v2_tour_b. Study A-v2 (v2_bench) was unaffected.
 - POST HOC (after seeing the tournament): v2_full_oldnet added to Study A-v2 (same 2000 fresh positions, resume of v2_bench)
   to test whether the two value nets differ in per-move quality. Reported as exploratory.
+- LayaChess revision pinned to 9269e61202b2c3517fef1cdacea83c3c23b92961: the only snapshot in the local cache, hence the
+  revision used by every v1 and v2 run (config previously had revision: null).
+- POST HOC scrutiny of v2 (scripts/scrutinize_v2.py): critical gate vs random gate at the same 60% rate: +1.1 cp
+  [-2.4, +4.7], not distinguishable; oracle at 60% = 52.6 ACPL. Median CPL 29 -> 16 (laya_only -> v2_full).
