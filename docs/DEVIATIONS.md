@@ -29,7 +29,6 @@ laya_only 392 ms/move (81 move scores/s); always_s2 1343 ms (laya 309 + search 1
   Val (optimistic, also used for the choice): laya_only 116.9 ACPL / 17.7% blunders; v2_safe 77.4 / 11.7%; v2_full 68.8 / 10.0%.
 - v2 practice match (dev openings, 10 games vs sf_elo_1320): no errors, 73 s/game, v2_full 6.5/10. Not a result.
 - v2 frozen before any fresh-set run (tag v2-frozen).
-- v2 dev choice (V2_PROTOCOL §3.2), first 300 val positions: v2_full ACPL 75.3 (prior T=0.01) vs 68.8 (T=0.1) -> T=0.1.
-  Val (optimistic, also used for the choice): laya_only 116.9 ACPL / 17.7% blunders; v2_safe 77.4 / 11.7%; v2_full 68.8 / 10.0%.
-- v2 practice match (dev openings, 10 games vs sf_elo_1320): no errors, 73 s/game, v2_full 6.5/10. Not a result.
-- v2 frozen before any fresh-set run (tag v2-frozen).
+- v2 final runs: the first launch (3 tournaments in parallel) crashed WSL (out of memory while loading Laya three times);
+  no games had been played. Relaunched as 2 staggered processes (v2_tour_a, v2_tour_b); ablation games vs laya_only head-to-head
+  included in v2_tour_b. Study A-v2 (v2_bench) was unaffected.
