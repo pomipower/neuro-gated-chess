@@ -40,3 +40,5 @@ laya_only 392 ms/move (81 move scores/s); always_s2 1343 ms (laya 309 + search 1
   [-2.4, +4.7], not distinguishable; oracle at 60% = 52.6 ACPL. Median CPL 29 -> 16 (laya_only -> v2_full).
 - v3 started (docs/V3_PROTOCOL.md): learned gate, check extension, Laya look-ahead, classical baseline, 2 anchors; v3 test month 2025-02 (HF shard 23).
 - v3 started (docs/V3_PROTOCOL.md): learned gate, check extension, Laya look-ahead, classical baseline, 2 anchors; v3 test month 2025-02 (HF shard 23).
+- v3 dev decisions (docs/V3_PROTOCOL.md §1b): learned gate (logistic) trained; check extension and Laya look-ahead not adopted
+  (look-ahead tested only as exploratory v3_look4). v3 frozen before any 2025-02 result (tag v3-frozen).

@@ -110,6 +110,8 @@ V2_AGENTS = {
     # v3: v2 + the options in the config's `v3` section (chosen on validation), e.g. check extension, Laya look-ahead
     "v3_safe": (False, "never", True, "new", {"v3": True}),
     "v3_full": (True, "critical", True, "new", {"v3": True}),
+    # exploratory (failed the dev time rule, tested anyway and labelled as such): Laya look-ahead k=4
+    "v3_look4": (True, "critical", True, "new", {"v3": True, "laya_lookahead": 4}),
     # learned gate (configs/gate_learned.json) at a target search rate (+ v3 options)
     "v3_learned_10": (True, "learned", True, "new", {"learned_rate": 10, "v3": True}),
     "v3_learned_25": (True, "learned", True, "new", {"learned_rate": 25, "v3": True}),
@@ -132,6 +134,7 @@ def build_v2_agent(name: str, res: Resources) -> Any:
         v3 = res.cfg.get("v3", {}) or {}
         o.update({k: v for k, v in v3.items() if k != "safety"})
         o["safety_opts"].update(v3.get("safety", {}) or {})
+        o.update({k: v for k, v in over.items() if k not in ("v3", "learned_rate", "policy")})  # agent-specific wins
     o["safety"] = over.get("safety", True)
     if gate == "learned":
         from src.engine.gate_features import LearnedGate

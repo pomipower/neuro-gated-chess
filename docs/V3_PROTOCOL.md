@@ -22,12 +22,27 @@ scrutiny (scripts/scrutinize_v2.py) left:
   Score thresholds for 10/25/60% search rates are set on validation. Saved to `configs/gate_learned.json`.
 - No other parameter of v2 changes.
 
+## 1b. Development outcomes (validation only; recorded before any v3 test data)
+
+- Blunder audit of v2_full's 100 games vs sf_elo_1320 (scripts/blunder_audit.py): in-game blunder rate 6.9%;
+  of the decisive first blunders (eval > -1.5 before), 42 were positional (no material lost within 10 plies),
+  ~30 tactical at various depths, 2 mate-related.
+- Check extension in the safety search: 60.3 -> 60.0 ACPL on val 300-700 (< 2 cp): **not adopted**.
+- Laya 2-ply look-ahead (GPU idle): k=2 -1.4 cp / +27% time; k=3 -3.8 cp / +41%; k=4 -4.8 cp / +59%.
+  No k meets both pre-set rules (>= 2 cp and <= 30% time): **not adopted** in the main v3 agents. It is run on
+  the test set as the clearly-labelled exploratory agent `v3_look4` (Study A only).
+- Learned gate (all 3000 val positions; 5-fold CV grouped by game): logistic chosen. CV composed ACPL vs the
+  random gate at the same rate: 74.18 vs 76.46 (10%), 71.65 vs 74.60 (25%), 68.29 vs 70.24 (60%); critical gate
+  (60%) 69.91; never 77.71; always 65.26. Largest weights: Laya margin top1-top2 (-1.76), confidence (-1.28):
+  search when Laya cannot separate its best moves.
+
 ## 2. Freeze, then final runs on the untouched month
 
 1. Build v3 sets from the new month with `scripts.build_fresh_sets --id-prefix g --exclude-months 2025-03
    --exclude-benchmarks data/benchmark_v2` into `data/benchmark_v3` (2000 positions, 50 openings).
 2. Commit `configs/v3.yaml`, `configs/gate_learned.json`, this file, DEVIATIONS -> tag `v3-frozen`.
-3. **Study A-v3**: 2000 new positions; agents laya_only, v2_safe, v2_always, v2_full; plus gate features.
+3. **Study A-v3**: 2000 new positions; agents laya_only, v2_safe, v2_always, v2_full, v3_look4 (exploratory);
+   plus gate features.
    The learned gate is evaluated by exact offline composition (v2_safe move unless the gate fires, then
    v2_always's), validated by the identity v2_full == composition(critical gate) (100.0% on v2 data).
 4. **Tournament-v3**: laya_only, v2_full, v3_learned_25, classical_full, each vs sf_elo_1320 and sf_elo_1600,
