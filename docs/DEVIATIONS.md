@@ -32,3 +32,5 @@ laya_only 392 ms/move (81 move scores/s); always_s2 1343 ms (laya 309 + search 1
 - v2 final runs: the first launch (3 tournaments in parallel) crashed WSL (out of memory while loading Laya three times);
   no games had been played. Relaunched as 2 staggered processes (v2_tour_a, v2_tour_b); ablation games vs laya_only head-to-head
   included in v2_tour_b. Study A-v2 (v2_bench) was unaffected.
+- POST HOC (after seeing the tournament): v2_full_oldnet added to Study A-v2 (same 2000 fresh positions, resume of v2_bench)
+  to test whether the two value nets differ in per-move quality. Reported as exploratory.
