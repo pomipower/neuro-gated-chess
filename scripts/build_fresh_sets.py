@@ -30,6 +30,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--v1-processed", default="data/processed")
     p.add_argument("--n-positions", type=int, default=2000)
     p.add_argument("--seed", type=int, default=20261019)
+    p.add_argument("--id-prefix", default="f", help="prefix for position/opening ids (v2: f, v3: g)")
+    p.add_argument("--exclude-months", nargs="*", default=[], help="months used by later versions (e.g. v2's 2025-03)")
+    p.add_argument("--exclude-benchmarks", nargs="*", default=[], help="other benchmark dirs whose positions/openings to exclude")
     return p.parse_args()
 
 
@@ -43,6 +46,7 @@ def main() -> None:
     by_month = discover(raw)
     v1_summary = json.loads((v1b / "split_summary.json").read_text())
     used = set(v1_summary.get("train_months", [])) | {v1_summary.get("val_month"), v1_summary.get("test_month")}
+    used |= set(args.exclude_months)
     if args.month in used:
         raise SystemExit(f"{args.month} was used by v1 ({sorted(m for m in used if m)}); pick an unused month")
     if args.month not in by_month:
@@ -54,18 +58,22 @@ def main() -> None:
         exclude |= {" ".join(str(f).split()[:4]) for f in z["fens"]}
     import pandas as pd
 
-    for f in ("positions_val.csv", "positions_test.csv"):
-        if (v1b / f).exists():
-            exclude |= {" ".join(s.split()[:4]) for s in pd.read_csv(v1b / f).fen}
-    rows = benchmark_positions(by_month[args.month], args.n_positions, cfg, rng, exclude, prefix="f")
+    for d in [v1b, *map(resolve, args.exclude_benchmarks)]:
+        for f in ("positions_val.csv", "positions_test.csv"):
+            if (d / f).exists():
+                exclude |= {" ".join(s.split()[:4]) for s in pd.read_csv(d / f).fen}
+    rows = benchmark_positions(by_month[args.month], args.n_positions, cfg, rng, exclude, prefix=args.id_prefix)
     write_csv(out / "positions_test.csv", rows, ["pos_id", "fen", "ply", "phase", "n_legal", "game_id"])
     counts = {ph: sum(r["phase"] == ph for r in rows) for ph in ("opening", "middlegame", "endgame")}
     print(f"  positions_test (fresh): {len(rows)} {counts}")
 
-    v1_open = pd.read_csv(v1b / "openings.csv")
-    ops = [o for o in build_openings(by_month[args.month], cfg, rng) if o["uci_moves"] not in set(v1_open.uci_moves)]
+    seen_open = set(pd.read_csv(v1b / "openings.csv").uci_moves)
+    for d in map(resolve, args.exclude_benchmarks):
+        if (d / "openings.csv").exists():
+            seen_open |= set(pd.read_csv(d / "openings.csv").uci_moves)
+    ops = [o for o in build_openings(by_month[args.month], cfg, rng) if o["uci_moves"] not in seen_open]
     for i, o in enumerate(ops):
-        o["opening_id"] = f"f{i:02d}"
+        o["opening_id"] = f"{args.id_prefix}{i:02d}"
     write_csv(out / "openings.csv", ops, ["opening_id", "uci_moves", "fen", "sf_cp_white"])
     print(f"  openings (fresh): {len(ops)}")
 

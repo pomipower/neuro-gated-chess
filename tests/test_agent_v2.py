@@ -80,3 +80,40 @@ def test_v2_agent_plays_a_short_legal_game() -> None:
 def test_tablebase_disabled_without_files(tmp_path) -> None:
     tb = Tablebase(tmp_path)
     assert tb.tb is None and tb.best_move(chess.Board("8/8/8/4k3/8/8/8/3QK3 w - - 0 1")) is None
+
+
+def test_gate_features_and_learned_gate(tmp_path) -> None:
+    import json
+
+    from src.engine.gate_features import FEATURES, LearnedGate, gate_features
+
+    board = chess.Board("4k3/8/8/3q4/8/4N3/8/4K3 w - - 0 1")
+    laya = LayaAgent(model_name="stand-in", device="cpu", scorer=MaterialStandIn())
+    out = laya.evaluate(board)
+    f = gate_features(board, out.scores, out.confidence)
+    assert list(f) == FEATURES and f["opportunity"] == 1.0 and f["n_captures"] >= 1
+    n = len(FEATURES)
+    g = {"features": FEATURES, "mean": [0.0] * n, "std": [1.0] * n, "coef": [0.0] * n, "intercept": 0.5,
+         "thresholds": {"25": 0.0, "60": 1.0}}
+    p = tmp_path / "g.json"
+    p.write_text(json.dumps(g))
+    assert LearnedGate(p, 25).use_search(f) and not LearnedGate(p, 60).use_search(f)
+
+
+def test_classical_policy_prefers_free_queen() -> None:
+    from src.engine.AgentV2 import HeuristicPolicy
+
+    board = chess.Board("4k3/8/8/3q4/8/4N3/8/4K3 w - - 0 1")
+    out = LayaAgent(model_name="heuristic", device="cpu", scorer=HeuristicPolicy()).evaluate(board)
+    assert out.best_move == chess.Move.from_uci("e3d5")
+
+
+def test_laya_lookahead_reranks_by_opponent_reply() -> None:
+    # Laya-stand-in prefers Qd5?? (pawn takes) at 1 ply; the 2-ply look-ahead sees the reply.
+    board = chess.Board("4k3/8/4p3/8/8/8/3Q4/4K3 w - - 0 1")
+    laya = LayaAgent(model_name="stand-in", device="cpu", scorer=MaterialStandIn())
+    a = agent(laya, gate="never", laya_lookahead=4, safety=False)
+    move, _ = a.select_move(board)
+    after = board.copy()
+    after.push(move)
+    assert not any(after.is_capture(r) and after.piece_type_at(r.to_square) == chess.QUEEN for r in after.legal_moves)

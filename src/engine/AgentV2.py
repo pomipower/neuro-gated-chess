@@ -5,9 +5,12 @@ Decision order for one move (each layer can be switched off in the config, which
   2. Mate in one: play it.                                                            -> system 3
   3. Laya scores every legal move (System 1).
   4. Gate: search if the position is critical (in check, a piece hanging, a profitable capture, few legal
-     moves, endgame), or always / never / by confidence. Sharp positions get more simulations.
+     moves, endgame), or always / never / by confidence, or (v3) by a learned gate
+     (src/engine/gate_features.py). Sharp positions get more simulations.
   5. System 2 (if gated in): PUCT with Laya's root prior, tactical priors at interior nodes, a quiescence
      correction of the value network at the leaves, tablebase leaves, and repetition contempt at the root.
+  5b. (option laya_lookahead = k) When not searching, re-rank Laya's top-k moves by a 2-ply Laya look-ahead:
+     value(m) = 1 - (Laya's best win chance for the opponent after m).
   6. Repetition contempt: when we are better (Laya win chance >= contempt_min_winchance), prefer a near-equal
      move that does not repeat a previous position.
   7. Blunder check (safe_choice): never play a move that loses material to a short forcing line when a
@@ -41,6 +44,38 @@ class MoveInfoV2(MoveInfo):
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+class HeuristicPolicy:
+    """Classical stand-in for Laya (the 'is Laya even needed?' baseline): deterministic win chances from
+    material after the move plus the tactical-prior signals (captures, promotions, checks, en prise).
+    Same interface as LayaChessModel.evaluate."""
+
+    def __init__(self) -> None:
+        self.n_sequences = 0
+
+    def evaluate(self, boards):
+        import numpy as np
+
+        from src.engine.tactics import material, tactical_prior
+
+        out = []
+        for b in boards:
+            moves = list(b.legal_moves)
+            pri = np.log(tactical_prior(b, moves) + 1e-9)
+            pri -= pri.mean()
+            q = []
+            for m, z in zip(moves, pri):
+                me = b.turn
+                b.push(m)
+                mate = b.is_checkmate()
+                mat = material(b, me) / 100.0
+                b.pop()
+                x = 30.0 if mate else 0.5 * mat + 0.3 * z
+                q.append(0.05 + 0.9 / (1.0 + math.exp(-max(-30.0, min(30.0, x)))))
+            self.n_sequences += len(moves)
+            out.append((moves, np.asarray(q, dtype=np.float32)))
+        return out
 
 
 class Tablebase:
@@ -130,6 +165,12 @@ class V2Agent:
             return False, 0, int(crit.critical)
         if gate == "confidence":
             return out.confidence <= self.o["tau"], sims, int(crit.critical)
+        if gate == "learned":
+            from src.engine.gate_features import gate_features
+
+            f = gate_features(board, out.scores, out.confidence, self.o.get("safety_opts", {}),
+                              self.o.get("few_legal_moves", 12), self.o.get("endgame_npm", 13))
+            return self.o["learned_gate"].use_search(f), sims, int(crit.critical)
         return crit.critical, sims, int(crit.critical)
 
     def decide(self, board: chess.Board, laya_out: LayaOutput | None = None
@@ -169,6 +210,27 @@ class V2Agent:
             search_ms = (time.perf_counter() - ts) * 1000.0
             preference = sorted(board.legal_moves,
                                 key=lambda m: (-res.visits.get(m, 0), -res.q.get(m, -9.0), -out.scores.get(m, 0.0), m.uci()))
+        k = int(self.o.get("laya_lookahead", 0) or 0)
+        if k > 1 and not use and self.laya is not None and hasattr(self.laya, "score_many"):
+            # 2-ply Laya: value of our move m = 1 - (opponent's best win chance after m), on Laya's top-k moves
+            top = preference[:k]
+            boards = []
+            for m in top:
+                b = board.copy(stack=False)
+                b.push(m)
+                boards.append(b)
+            live = [i for i, b in enumerate(boards) if not b.is_game_over()]
+            replies = self.laya.score_many([boards[i] for i in live]) if live else []
+            val = {}
+            for i, m in enumerate(top):
+                if i in live:
+                    sc = replies[live.index(i)]
+                    val[m] = 1.0 - max(sc.values())
+                else:
+                    o = boards[i].outcome(claim_draw=False)
+                    val[m] = 1.0 if (o and o.winner == board.turn) else 0.5
+            top = sorted(top, key=lambda m: (-val[m], -out.scores.get(m, 0.0), m.uci()))
+            preference = top + preference[k:]
         rep_avoided = 0
         if contempt > 0 and rep and preference[0] in rep:
             tol = self.o.get("contempt_tolerance", 0.06)
@@ -181,7 +243,7 @@ class V2Agent:
         if self.o.get("safety", True):
             s = self.o.get("safety_opts", {})
             r = safe_choice(board, preference, s.get("candidates", 6), s.get("full_plies", 2),
-                            s.get("margin_cp", 150), s.get("max_nodes", 6000))
+                            s.get("margin_cp", 150), s.get("max_nodes", 6000), s.get("check_plies", 0))
             move, override = r.move, int(r.overridden)
         mi = info(2 if use else 1, out.confidence, laya_calls=1, laya_moves_scored=out.n_scored,
                   cnn_evals=res.cnn_evals if res else 0, mcts_sims=res.sims if res else 0,

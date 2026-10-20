@@ -80,3 +80,12 @@ def test_safety_speed_middlegame() -> None:
     t = time.perf_counter()
     safe_choice(b, list(b.legal_moves))
     assert time.perf_counter() - t < 5.0
+
+
+def test_check_extension_finds_opponent_mate_in_two() -> None:
+    # After the quiet f5-f6, Black mates with ...Rb2+ K-any ...Ra1#: invisible to 2 plies + captures,
+    # visible once quiescence may also try checking moves.
+    b = chess.Board("3k4/8/8/5P2/1r6/r7/7K/8 w - - 0 1")
+    m = chess.Move.from_uci("f5f6")
+    assert tactical_score(b, m) > -5000
+    assert tactical_score(b, m, check_plies=1) < -50_000

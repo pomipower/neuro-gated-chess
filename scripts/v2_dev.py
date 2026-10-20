@@ -28,6 +28,7 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--config", default="configs/v2.yaml")
     p.add_argument("--n", type=int, default=150)
+    p.add_argument("--offset", type=int, default=0, help="skip the first N validation positions")
     p.add_argument("--agents", default="laya_only,v2_safe,v2_full")
     p.add_argument("--set", action="append", default=[], help="override, e.g. v2.prior_temperature=0.1")
     return p.parse_args()
@@ -48,7 +49,7 @@ def main() -> None:
     args = parse_args()
     cfg = load_config(args.config)
     apply_overrides(cfg, args.set)
-    pos = pd.read_csv(resolve(cfg["data"]["benchmark_dir"]) / "positions_val.csv").head(args.n)
+    pos = pd.read_csv(resolve(cfg["data"]["benchmark_dir"]) / "positions_val.csv").iloc[args.offset:args.offset + args.n]
     res = Resources(cfg, load_gate_config())
     names = [a.strip() for a in args.agents.split(",")]
     agents = {a: build_agent(a, res) for a in names}

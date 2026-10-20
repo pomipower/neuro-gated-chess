@@ -107,6 +107,16 @@ V2_AGENTS = {
     "v2_full_nosafety": (True, "critical", True, "new", {"safety": False}),
     "v2_full_nocontempt": (True, "critical", True, "new", {"contempt": 0.0}),
     "v2_full_notb": (True, "critical", True, "new", {"tablebase": False}),
+    # v3: v2 + the options in the config's `v3` section (chosen on validation), e.g. check extension, Laya look-ahead
+    "v3_safe": (False, "never", True, "new", {"v3": True}),
+    "v3_full": (True, "critical", True, "new", {"v3": True}),
+    # learned gate (configs/gate_learned.json) at a target search rate (+ v3 options)
+    "v3_learned_10": (True, "learned", True, "new", {"learned_rate": 10, "v3": True}),
+    "v3_learned_25": (True, "learned", True, "new", {"learned_rate": 25, "v3": True}),
+    "v3_learned_60": (True, "learned", True, "new", {"learned_rate": 60, "v3": True}),
+    # classical baseline: the same safety layer and search, but a heuristic policy instead of Laya
+    "classical_safe": (False, "never", True, "new", {"policy": "heuristic"}),
+    "classical_full": (True, "critical", True, "new", {"policy": "heuristic"}),
 }
 
 
@@ -117,14 +127,30 @@ def build_v2_agent(name: str, res: Resources) -> Any:
         raise SystemExit(f"{name} needs the v2 config: use --config configs/v2.yaml (python -m scripts.make_v2_config)")
     with_search, gate, improved, ck, over = V2_AGENTS[name]
     o = {**res.cfg["v2"], "gate": gate, **over}
-    o["safety_opts"] = res.cfg["v2"].get("safety", {})
+    o["safety_opts"] = dict(res.cfg["v2"].get("safety", {}))
+    if over.get("v3"):
+        v3 = res.cfg.get("v3", {}) or {}
+        o.update({k: v for k, v in v3.items() if k != "safety"})
+        o["safety_opts"].update(v3.get("safety", {}) or {})
     o["safety"] = over.get("safety", True)
+    if gate == "learned":
+        from src.engine.gate_features import LearnedGate
+        from src.utils import resolve
+
+        o["learned_gate"] = LearnedGate(resolve(res.cfg["v2"].get("learned_gate_path", "configs/gate_learned.json")),
+                                        over["learned_rate"])
     tb = res.tablebase
     factory = None
     if with_search:
         ckpt = res.cfg["model"]["checkpoint"] if ck == "new" else res.cfg["v2"]["v1_checkpoint"]
         factory = make_search_factory(res.value_fn_for(ckpt), res.cfg, tb, improved)
-    return V2Agent(res.laya, factory, o, tb, name=name)
+    laya = res.laya
+    if over.get("policy") == "heuristic":
+        from src.engine.AgentV2 import HeuristicPolicy
+        from src.engine.LayaAgent import LayaAgent
+
+        laya = LayaAgent(model_name="heuristic", device="cpu", scorer=HeuristicPolicy())
+    return V2Agent(laya, factory, o, tb, name=name)
 
 
 def build_agent(name: str, res: Resources, seed: int = 0) -> Any:

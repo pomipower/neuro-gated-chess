@@ -60,8 +60,10 @@ class _Budget:
         self.left = n
 
 
-def qsearch(board: chess.Board, alpha: int, beta: int, budget: _Budget, depth: int = 0) -> int:
-    """Quiescence: material score for the side to move after resolving captures (and check evasions)."""
+def qsearch(board: chess.Board, alpha: int, beta: int, budget: _Budget, depth: int = 0, checks: int = 0) -> int:
+    """Quiescence: material score for the side to move after resolving captures (and check evasions).
+    With checks > 0, quiet checking moves are also tried for that many more quiescence plies (finds forcing
+    mating attacks and check-then-capture tactics beyond the full-width horizon)."""
     budget.left -= 1
     in_check = board.is_check()
     if in_check:
@@ -78,12 +80,15 @@ def qsearch(board: chess.Board, alpha: int, beta: int, budget: _Budget, depth: i
         moves = [m for m in board.generate_legal_captures()] + \
                 [m for m in board.generate_legal_moves(to_mask=chess.BB_RANK_1 | chess.BB_RANK_8)
                  if m.promotion == chess.QUEEN and not board.is_capture(m)]
+        if checks > 0:
+            moves += [m for m in board.generate_legal_moves()
+                      if not board.is_capture(m) and not m.promotion and board.gives_check(m)]
     if budget.left <= 0 and in_check:
         return material(board, board.turn)
     moves.sort(key=lambda m: -_mvv_lva(board, m))
     for m in moves:
         board.push(m)
-        score = -qsearch(board, -beta, -alpha, budget, depth + 1)
+        score = -qsearch(board, -beta, -alpha, budget, depth + 1, max(0, checks - 1))
         board.pop()
         if score > best:
             best = score
@@ -94,20 +99,21 @@ def qsearch(board: chess.Board, alpha: int, beta: int, budget: _Budget, depth: i
     return best
 
 
-def _search(board: chess.Board, plies: int, alpha: int, beta: int, budget: _Budget, depth: int) -> int:
+def _search(board: chess.Board, plies: int, alpha: int, beta: int, budget: _Budget, depth: int,
+            checks: int = 0) -> int:
     budget.left -= 1
     moves = list(board.legal_moves)
     if not moves:
         return -MATE + depth if board.is_check() else 0
     if plies <= 0 or budget.left <= 0:
-        return qsearch(board, alpha, beta, budget, depth)
+        return qsearch(board, alpha, beta, budget, depth, checks if budget.left > 0 else 0)
     caps = [m for m in moves if board.is_capture(m) or m.promotion]
     caps.sort(key=lambda m: -_mvv_lva(board, m))
     quiet = [m for m in moves if not (board.is_capture(m) or m.promotion)]
     best = -INF
     for m in caps + quiet:
         board.push(m)
-        score = -_search(board, plies - 1, -beta, -alpha, budget, depth + 1)
+        score = -_search(board, plies - 1, -beta, -alpha, budget, depth + 1, checks)
         board.pop()
         if score > best:
             best = score
@@ -118,11 +124,13 @@ def _search(board: chess.Board, plies: int, alpha: int, beta: int, budget: _Budg
     return best
 
 
-def tactical_score(board: chess.Board, move: chess.Move, full_plies: int = 2, max_nodes: int = 6000) -> int:
-    """Material outcome (cp, mover's perspective) of `move` after `full_plies` full-width replies + quiescence."""
+def tactical_score(board: chess.Board, move: chess.Move, full_plies: int = 2, max_nodes: int = 6000,
+                   check_plies: int = 0) -> int:
+    """Material outcome (cp, mover's perspective) of `move` after `full_plies` full-width replies + quiescence
+    (with `check_plies` extra plies of checking moves in the quiescence search)."""
     b = board.copy(stack=False)
     b.push(move)
-    return -_search(b, full_plies, -INF, INF, _Budget(max_nodes), 1)
+    return -_search(b, full_plies, -INF, INF, _Budget(max_nodes), 1, check_plies)
 
 
 def mate_in_one(board: chess.Board) -> chess.Move | None:
@@ -143,14 +151,14 @@ class SafetyResult:
 
 
 def safe_choice(board: chess.Board, preference: list[chess.Move], candidates: int = 6, full_plies: int = 2,
-                margin_cp: int = 150, max_nodes: int = 6000) -> SafetyResult:
+                margin_cp: int = 150, max_nodes: int = 6000, check_plies: int = 0) -> SafetyResult:
     """Blunder check. `preference` = legal moves, most preferred first (Laya ranking or search visits)."""
     top = preference[0]
     scores: dict[chess.Move, int] = {}
 
     def score(m: chess.Move) -> int:
         if m not in scores:
-            scores[m] = tactical_score(board, m, full_plies, max_nodes)
+            scores[m] = tactical_score(board, m, full_plies, max_nodes, check_plies)
         return scores[m]
 
     score(top)
