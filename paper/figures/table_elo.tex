@@ -1,0 +1,12 @@
+\begin{tabular}{llrr}
+\toprule
+agent & Elo (95\% CI) & games & score \\
+\midrule
+sf\_elo\_1320 & 1320 & 200 & 0.935000 \\
+laya\_only & 904 [832, 958] & 200 & 0.468000 \\
+always\_s2 & 887 [821, 938] * & 200 & 0.443000 \\
+hybrid\_s2\_50 & 879 [810, 932] * & 200 & 0.430000 \\
+mcts\_uniform & 734 [668, 783] * & 200 & 0.225000 \\
+\bottomrule
+\end{tabular}
+% * off-scale: scored >90% or <10% against every anchor

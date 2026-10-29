@@ -1,0 +1,7 @@
+model,rate_pct,cv_acpl
+logistic,10,74.17666666666666
+logistic,25,71.64766666666667
+logistic,60,68.291
+ridge,10,74.615
+ridge,25,72.084
+ridge,60,67.15733333333333

@@ -53,3 +53,8 @@ stockfish
 stockfish.exe
 stockfish-*
 !src/engine/Stockfish.py
+data/processed_v2/
+data/syzygy/
+data/raw_new/
+*.npz
+*.zip

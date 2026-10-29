@@ -1,0 +1,6 @@
+gate,search_rate,acpl
+never (v2_safe),0.0,76.468
+"critical (v2_full, composed)",0.6045,68.668
+"random, same rate (mean of 500)",0.6045,69.83687400000001
+"oracle, same rate (upper bound)",0.6045,52.575
+always (v2_always),1.0,65.386

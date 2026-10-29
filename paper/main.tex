@@ -1,1 +1,93 @@
- 
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{iftex}
+\usepackage{amsmath,amssymb}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage{mathptmx}
+\else
+  \usepackage{fontspec}
+  \defaultfontfeatures{Ligatures=TeX}
+  \setmainfont{texgyretermes}[Extension=.otf,UprightFont=*-regular,BoldFont=*-bold,ItalicFont=*-italic,BoldItalicFont=*-bolditalic]
+  \setsansfont{texgyreheros}[Extension=.otf,UprightFont=*-regular,BoldFont=*-bold,ItalicFont=*-italic,BoldItalicFont=*-bolditalic]
+  \setmonofont{texgyrecursor}[Extension=.otf,UprightFont=*-regular,BoldFont=*-bold,ItalicFont=*-italic,BoldItalicFont=*-bolditalic,Scale=MatchLowercase]
+  \usepackage{unicode-math}
+  \setmathfont{texgyretermes-math.otf}
+\fi
+\usepackage{cite}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,calc}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+\input{numbers.tex}
+
+\newcommand{\ag}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\cp}{\,cp}
+\newcommand{\Hone}{\textsf{H1}}\newcommand{\Htwo}{\textsf{H2}}\newcommand{\Hthree}{\textsf{H3}}
+\newcommand{\Hfour}{\textsf{H4}}\newcommand{\Hfive}{\textsf{H5}}\newcommand{\Hsix}{\textsf{H6}}
+\graphicspath{{figures/}}
+
+\begin{document}
+
+\title{Neuro-Gated Chess: Does System~1 Confidence Tell a Chess Agent When to Search?}
+
+\author{\IEEEauthorblockN{Om Kulkarni}
+\IEEEauthorblockA{\textit{Dept. of E\&TC}\\
+\textit{COEP Technological}\\
+\textit{University}\\
+Pune, India\\
+MIS: 612407094}
+\and
+\IEEEauthorblockN{Rohan Bhide}
+\IEEEauthorblockA{\textit{Dept. of E\&TC}\\
+\textit{COEP Technological}\\
+\textit{University}\\
+Pune, India\\
+MIS: 612407029}
+\and
+\IEEEauthorblockN{Shaunak Save}
+\IEEEauthorblockA{\textit{Dept. of E\&TC}\\
+\textit{COEP Technological}\\
+\textit{University}\\
+Pune, India\\
+MIS: 612407166}
+\and
+\IEEEauthorblockN{Parth Kamble}
+\IEEEauthorblockA{\textit{Dept. of E\&TC}\\
+\textit{COEP Technological}\\
+\textit{University}\\
+Pune, India\\
+MIS: 612407077}}
+
+\maketitle
+
+\begin{abstract}
+\input{sections/abstract}
+\end{abstract}
+
+\begin{IEEEkeywords}
+selective search, metareasoning, confidence estimation, dual-process agents, Monte Carlo tree search, chess, learned gating, blunder filtering, negative result
+\end{IEEEkeywords}
+
+\input{sections/introduction}
+\input{sections/hypotheses}
+\input{sections/related}
+\input{sections/architecture}
+\input{sections/methods}
+\input{sections/results}
+\input{sections/followup}
+\input{sections/discussion}
+\input{sections/limitations}
+\input{sections/conclusion}
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\appendices
+\input{sections/appendix_followup}
+
+\end{document}

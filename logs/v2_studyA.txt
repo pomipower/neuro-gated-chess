@@ -1,0 +1,26 @@
+== v2 Study A (fresh positions; diffs are agent minus laya_only, 95% paired bootstrap CI)
+          agent    n    acpl  blunder_rate  top1  ms_per_move  search_rate  safety_override_rate  acpl_diff_vs_laya  acpl_lo  acpl_hi  acpl_p  blunder_diff_vs_laya  blunder_lo  blunder_hi  blunder_p
+     v2_always 2000  65.386         0.092 0.338     1604.112        0.986                 0.078            -49.148  -57.187  -41.204     0.0                -0.085      -0.100      -0.070        0.0
+       v2_full 2000  68.668         0.096 0.326     1308.489        0.604                 0.084            -45.866  -53.633  -38.157     0.0                -0.081      -0.095      -0.067        0.0
+v2_full_oldnet 2000  69.711         0.096 0.313     1166.105        0.604                 0.076            -44.822  -52.421  -37.319     0.0                -0.080      -0.094      -0.067        0.0
+       v2_safe 2000  76.468         0.115 0.308      571.290        0.000                 0.108            -38.066  -44.900  -31.230     0.0                -0.062      -0.073      -0.051        0.0
+     laya_only 2000 114.534         0.177 0.270      475.764        0.000                   NaN                NaN      NaN      NaN     NaN                   NaN         NaN         NaN        NaN
+
+== by phase
+                               acpl  blunder_rate     n
+agent          phase                                  
+laya_only      endgame      98.600         0.152   400
+               middlegame  140.582         0.225  1200
+               opening      52.320         0.058   400
+v2_always      endgame      53.805         0.080   400
+               middlegame   76.014         0.116  1200
+               opening      45.082         0.032   400
+v2_full        endgame      53.805         0.080   400
+               middlegame   81.996         0.122  1200
+               opening      43.548         0.035   400
+v2_full_oldnet endgame      52.445         0.075   400
+               middlegame   84.182         0.123  1200
+               opening      43.565         0.038   400
+v2_safe        endgame      64.455         0.095   400
+               middlegame   91.783         0.148  1200
+               opening      42.535         0.035   400

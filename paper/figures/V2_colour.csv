@@ -1,0 +1,10 @@
+,,mean,mean,size,size
+colour,,black,white,black,white
+agent,opp,,,,
+laya_only,sf_elo_1320,0.06,0.13,50,50
+laya_only,v2_full,0.23,0.25,50,50
+v2_full,laya_only,0.75,0.77,50,50
+v2_full,sf_elo_1320,0.23,0.27,50,50
+v2_full_nosafety,sf_elo_1320,0.18,0.22,50,50
+v2_full_oldnet,sf_elo_1320,0.34,0.25,50,50
+v2_safe,sf_elo_1320,0.13,0.25,50,50

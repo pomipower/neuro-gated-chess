@@ -1,0 +1,13 @@
+paired Elo differences (1000 opening-cluster resamples, 800 games)
+    v3_learned_25 - v2_full            -2.9  95% CI [-89.0, +80.7]  P(diff<=0)=0.523  P(diff<=-50)=0.137
+          v2_full - classical_full   +212.2  95% CI [+133.3, +296.1]  P(diff<=0)=0.000  P(diff<=-50)=0.000
+          v2_full - laya_only        +288.7  95% CI [+208.3, +379.7]  P(diff<=0)=0.000  P(diff<=-50)=0.000
+   classical_full - laya_only         +76.4  95% CI [-32.6, +190.2]  P(diff<=0)=0.085  P(diff<=-50)=0.012
+
+in-game behaviour
+                 moves  search_rate  sec_per_move  safety_override
+agent                                                            
+classical_full   5748        0.567         1.102            0.357
+laya_only        6613        0.000         0.265              NaN
+v2_full          9601        0.591         1.125            0.090
+v3_learned_25    9063        0.398         0.906            0.128

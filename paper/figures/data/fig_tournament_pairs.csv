@@ -1,0 +1,7 @@
+pair,a,b,n,a_wins,draws,b_wins,a_score,threefold,checkmate,stalemate,mean_plies,runs
+always_s2 vs hybrid_s2_50,always_s2,hybrid_s2_50,50,4,45,1,0.53,45,5,0,71.02,tour_t2a
+always_s2 vs laya_only,always_s2,laya_only,50,1,46,3,0.48,46,4,0,67.16,tour_t2a
+always_s2 vs mcts_uniform,always_s2,mcts_uniform,50,20,30,0,0.7,30,20,0,70.22,tour_t2b
+hybrid_s2_50 vs laya_only,hybrid_s2_50,laya_only,50,0,47,3,0.47,47,3,0,68.38,tour_t2b
+hybrid_s2_50 vs mcts_uniform,hybrid_s2_50,mcts_uniform,50,20,30,0,0.7,30,20,0,69.98,tour_t2b
+laya_only vs mcts_uniform,laya_only,mcts_uniform,50,22,27,1,0.71,25,23,2,63.12,tour_t2a

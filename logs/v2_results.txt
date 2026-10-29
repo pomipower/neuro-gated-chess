@@ -1,0 +1,54 @@
+== v2 Study A (fresh positions; diffs are agent minus laya_only, 95% paired bootstrap CI)
+     agent    n    acpl  blunder_rate  top1  ms_per_move  search_rate  safety_override_rate  acpl_diff_vs_laya  acpl_lo  acpl_hi  acpl_p  blunder_diff_vs_laya  blunder_lo  blunder_hi  blunder_p
+v2_always 2000  65.386         0.092 0.338     1604.112        0.986                 0.078            -49.148  -57.187  -41.204     0.0                -0.085      -0.100      -0.070        0.0
+  v2_full 2000  68.668         0.096 0.326     1308.489        0.604                 0.084            -45.866  -53.633  -38.157     0.0                -0.081      -0.095      -0.067        0.0
+  v2_safe 2000  76.468         0.115 0.308      571.290        0.000                 0.108            -38.066  -44.900  -31.230     0.0                -0.062      -0.073      -0.051        0.0
+laya_only 2000 114.534         0.177 0.270      475.764        0.000                   NaN                NaN      NaN      NaN     NaN                   NaN         NaN         NaN        NaN
+
+== by phase
+                          acpl  blunder_rate     n
+agent     phase                                  
+laya_only endgame      98.600         0.152   400
+          middlegame  140.582         0.225  1200
+          opening      52.320         0.058   400
+v2_always endgame      53.805         0.080   400
+          middlegame   76.014         0.116  1200
+          opening      45.082         0.032   400
+v2_full   endgame      53.805         0.080   400
+          middlegame   81.996         0.122  1200
+          opening      43.548         0.035   400
+v2_safe   endgame      64.455         0.095   400
+          middlegame   91.783         0.148  1200
+          opening      42.535         0.035   400
+
+== v2 tournament scores
+            agent              opp  mean  size  sum
+       laya_only      sf_elo_1320 0.095   100  9.5
+       laya_only          v2_full 0.240   100 24.0
+     sf_elo_1320        laya_only 0.905   100 90.5
+     sf_elo_1320          v2_full 0.750   100 75.0
+     sf_elo_1320 v2_full_nosafety 0.800   100 80.0
+     sf_elo_1320   v2_full_oldnet 0.705   100 70.5
+     sf_elo_1320          v2_safe 0.810   100 81.0
+         v2_full        laya_only 0.760   100 76.0
+         v2_full      sf_elo_1320 0.250   100 25.0
+v2_full_nosafety      sf_elo_1320 0.200   100 20.0
+  v2_full_oldnet      sf_elo_1320 0.295   100 29.5
+         v2_safe      sf_elo_1320 0.190   100 19.0
+
+terminations:
+ termination
+checkmate                452
+threefold_repetition     142
+max_plies                  2
+insufficient_material      2
+fifty_moves                2
+
+== Elo (fit_elo)
+            agent    elo  ci_low  ci_high  games  score  anchor  off_scale
+     sf_elo_1320 1320.0  1320.0   1320.0    500    0.8    True      False
+  v2_full_oldnet 1168.9  1090.3   1235.1    100    0.3   False      False
+         v2_full 1129.6  1072.4   1179.8    200    0.5   False      False
+v2_full_nosafety 1079.6   998.2   1147.5    100    0.2   False      False
+         v2_safe 1068.6  1005.4   1124.9    100    0.2   False      False
+       laya_only  929.5   863.2    984.5    200    0.2   False       True

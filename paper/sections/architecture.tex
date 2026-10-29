@@ -1,0 +1,64 @@
+\section{System Architecture}
+\label{sec:arch}
+Figure~\ref{fig:arch} shows the decision flow, which follows the repository's implementation (\texttt{HybridAgent}, \texttt{SearchTree}, \texttt{gating}); every component in the figure corresponds to code that we inspected.
+
+\begin{figure*}[t]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[font=\footnotesize,x=1cm,y=1cm,
+  box/.style={draw,rounded corners=2pt,align=center,inner sep=4pt,fill=white,minimum height=11mm},
+  s1/.style={box,fill=blue!8},s2/.style={box,fill=orange!14},
+  gate/.style={draw,diamond,aspect=2,align=center,inner sep=1pt,fill=gray!12},
+  arr/.style={-{Stealth[length=4pt]},thick}]
+  \node[box] (pos) at (0,0) {Position $P$\\legal moves $m_1,\dots,m_n$};
+  \node[s1] (laya) at (4.7,0) {\textbf{System 1}: LayaChess (421M)\\win chance $w_i\in[0.05,0.95]$\\for every legal move};
+  \node[box] (conf) at (10.0,0) {confidence $c=\max_i \mathrm{softmax}_i\!\big(\mathrm{logit}(w_i)/T\big)$\\with $T=0.5$ (prediction confidence)};
+  \node[gate] (g) at (14.8,0) {$c\le\tau$\,?};
+  \node[s1] (play1) at (14.8,2.4) {play $\arg\max_i w_i$\\(System 1 move)};
+  \node[s2] (mcts) at (14.8,-3.0) {\textbf{System 2}: PUCT, 400 simulations\\root prior $\propto \mathrm{softmax}\big(\mathrm{logit}(w)/0.01\big)$\\leaf: ValueCNN (2.3M); exact terminals};
+  \node[box] (out) at (8.6,-3.0) {play the most-visited\\root move};
+  \draw[arr] (pos)--(laya); \draw[arr] (laya)--(conf); \draw[arr] (conf)--(g);
+  \draw[arr] (g.north)--node[right]{no ($c>\tau$)}(play1.south);
+  \draw[arr] (g.south)--node[right]{yes}(mcts.north);
+  \draw[arr] (mcts.west)--(out.east);
+  \draw[arr,dashed,gray] (laya.south)--(4.7,-5.0)--(14.8,-5.0)--(mcts.south) node[pos=.35,above,font=\scriptsize,text=gray]{System 1 scores are reused as the search prior};
+  \node[font=\scriptsize,gray,align=left,anchor=north west] at (-1.9,-5.5) {Controls: \texttt{laya\_only} ($\tau=-\infty$, never search); \texttt{always\_s2} ($\tau=\infty$); \texttt{mcts\_uniform} (no System 1, uniform root prior); \texttt{random\_s2} (coin flip at the same rate);\\\texttt{hybrid\_s2\_}$k$ (confidence gate with target search rate $k\%$).};
+\end{tikzpicture}}
+\caption{Neuro-gated chess. System~1 scores every legal move; a threshold on the softmax confidence decides whether the System~1 move is played or the same scores seed a PUCT search. $\tau$ is the validation-set quantile of confidence for the target search rate.}
+\label{fig:arch}
+\end{figure*}
+
+\subsection{Components (stage V1)}
+\textbf{System~1} (learned, external, frozen) is LayaChess (\texttt{datafreak/laya-chess}): one forward pass per legal move returns an expected win chance in $[0.05,0.95]$; it scored \layaScored{} moves per test position. The checkpoint revision was not pinned in V1. \textbf{Confidence and gate} (handcrafted, tuned on validation): confidence is the largest probability of $\mathrm{softmax}(\mathrm{logit}(w_i)/T)$ over legal moves with $T=0.5$. It is a prediction-confidence score, not a calibrated probability: values mostly lie below 0.2 while \goodRateLaya\% of moves are good. The gate sends a position to System~2 iff $c\le\tau$, with $\tau_q$ the validation quantiles of confidence for target rates $q\in\{10,25,50,75\}\%$ (achieved test rates \rateTen, \rateTf, \rateFifty, \rateSf\%). \textbf{System~2} is a PUCT search with 400 simulations, $c_\text{puct}=1.5$, first-play reduction 0.2, no noise or tree reuse; priors are System~1's scores at the root and uniform inside the tree; leaves are scored by a residual value network (18 input planes, six 128-channel blocks, spatial head; \vnParams M parameters) with exact terminals. The final move is the most-visited root move. \textbf{Controls:} \ag{laya_only} (never search), \ag{always_s2}, \ag{mcts_uniform} (no System~1), \ag{random_s2} (coin flip at the same rate) and \ag{hybrid_s2_}$k$ (confidence gate at rate $k\%$).
+
+\textbf{Search is anchored to System~1.} The root-prior temperature was tuned on 150 validation positions: ACPL of \ag{always_s2} was \swTthree{} at 0.3, \swTone{} at 0.1 and \swTz{} at 0.01 (\ag{laya_only}: \swLaya). The chosen 0.01 makes the prior nearly one-hot, so System~2 acts as a verifier that overrides System~1's top move in only \fracChanged\% of test positions. This choice matters for every V1 result and is revisited in Section~\ref{sec:followup}.
+
+\subsection{Extensions in stages V2 and V3}
+\label{sec:arch-v2}
+After V1 the agent gained the components in Fig.~\ref{fig:arch2}; a move comes from the first stage that decides.
+
+\begin{figure}[t]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[font=\scriptsize,node distance=3.2mm and 3.6mm,
+  b/.style={draw,rounded corners=1.5pt,align=center,inner sep=2.5pt,fill=white,minimum height=7mm},
+  s1/.style={b,fill=blue!8},s2/.style={b,fill=orange!14},new/.style={b,fill=green!10},
+  arr/.style={-{Stealth[length=3pt]}}]
+  \node[new] (tb) {tablebase\\mate-in-1};
+  \node[s1,right=of tb] (l) {System 1\\(Laya)};
+  \node[new,right=of l] (g) {gate\\critical / learned};
+  \node[s2,right=of g] (s) {System 2\\200/400 sims};
+  \node[new,below=of s] (c) {contempt};
+  \node[new,left=of c] (f) {blunder filter\\(2-ply + qsearch)};
+  \node[b,left=of f] (m) {move};
+  \draw[arr] (tb)--(l); \draw[arr] (l)--(g); \draw[arr] (g)--(s); \draw[arr] (s)--(c); \draw[arr] (c)--(f); \draw[arr] (f)--(m);
+\end{tikzpicture}}
+\caption{Decision flow of the V2/V3 agent (blue System~1, orange System~2, green added after V1). If the gate does not fire, System~1's move goes straight to contempt.}
+\label{fig:arch2}
+\end{figure}
+
+\textbf{Blunder filter.} Candidates $\mathcal C$ are the six most preferred moves and all captures. Each gets a material score $M(m)$ from a two-ply full-width search with material-only quiescence, and the agent plays the most preferred move $m^{\ast}$ within $\delta=150$\cp\ of the best:
+\begin{equation}
+M(m^{\ast})\ge \max_{m'\in\mathcal C} M(m')-\delta .
+\end{equation}
+It knows nothing about positional quality, deliberately: V1's costliest errors were material. \textbf{Search:} quiescence-corrected leaves, tactical interior priors (MVV-LVA captures, promotions, checks), tablebase leaves, root-prior temperature 0.1. \textbf{Value network:} LeakyReLU head, weight decay $10^{-4}$, labels $\tfrac12 r+\tfrac12\tanh(\mathrm{cp}_{\mathrm{SF}}/400)$. \textbf{Gates:} V2 searches if in check, a piece hangs, a profitable capture exists, there are at most 12 legal moves, or the position is an endgame (400 simulations when sharp, 200 otherwise); V3 uses the logistic model of Section~\ref{sec:followup}. \textbf{Contempt:} if System~1's best win chance is at least 0.55, a repeating move scores as a draw worth $-0.10$ and is replaced by a non-repeating move within 0.06 win chance.

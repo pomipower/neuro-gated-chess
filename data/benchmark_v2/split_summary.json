@@ -1,0 +1,22 @@
+{
+  "train_months": [
+    "2025-04",
+    "2025-05",
+    "2025-06",
+    "2025-07",
+    "2025-08",
+    "2025-09"
+  ],
+  "val_month": "2025-10",
+  "test_month": "2025-11",
+  "fresh_month": "2025-03",
+  "seed": 20261019,
+  "positions_test": {
+    "n": 2000,
+    "opening": 400,
+    "middlegame": 1200,
+    "endgame": 400
+  },
+  "n_openings": 50,
+  "note": "v2 sets; positions_val/openings_dev/puzzles are copies of v1 sets"
+}
