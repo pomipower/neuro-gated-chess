@@ -1,0 +1,7 @@
+agent,elo,ci_low,ci_high,games,score,anchor,off_scale
+sf_elo_1900,1900.0,1900.0,1900.0,8,0.938,True,False
+sf_elo_1700,1700.0,1700.0,1700.0,8,1.0,True,False
+sf_elo_1500,1500.0,1500.0,1500.0,8,0.875,True,False
+sf_elo_1320,1320.0,1320.0,1320.0,8,0.938,True,False
+laya_only,1184.1,1184.1,1184.1,16,0.125,False,False
+always_s2,692.3,692.3,692.3,16,0.0,False,True

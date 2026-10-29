@@ -5,7 +5,7 @@ Output (batch, 1) in [-1, 1], WHITE perspective (+1 white winning). Never conver
 
 Stem:  Conv3x3(18->128, bias=False) -> BN -> ReLU
 Body:  6 residual blocks of [conv3x3 -> BN -> ReLU -> conv3x3 -> BN] + skip -> ReLU   (128 channels)
-Head:  Conv1x1(128->32) -> BN -> ReLU -> Flatten(2048) -> Linear(2048->256) -> ReLU -> Linear(256->1) -> Tanh
+Head:  Conv1x1(128->32) -> BN -> ReLU -> Flatten(2048) -> Linear(2048->256) -> ReLU (v2: LeakyReLU) -> Linear(256->1) -> Tanh
 He (kaiming_normal_) init for convs. About 2.32M parameters. Do NOT global-pool the head to a scalar.
 Tests: tests/test_value_cnn.py.
 """
@@ -45,10 +45,16 @@ class ValueCNN(nn.Module):
         res_blocks: int = 6,
         head_channels: int = 32,
         fc_hidden: int = 256,
+        head_act: str = "relu",
     ) -> None:
         super().__init__()
         self.hparams = dict(planes=planes, channels=channels, res_blocks=res_blocks,
                             head_channels=head_channels, fc_hidden=fc_hidden)
+        if head_act != "relu":                    # v1 checkpoints have no head_act key and load as relu
+            self.hparams["head_act"] = head_act
+        if head_act not in ("relu", "leaky"):
+            raise ValueError(f"head_act must be relu or leaky, not {head_act!r}")
+        fc_act = nn.ReLU() if head_act == "relu" else nn.LeakyReLU(0.01)
         self.stem = nn.Sequential(
             nn.Conv2d(planes, channels, 3, padding=1, bias=False), nn.BatchNorm2d(channels), nn.ReLU()
         )
@@ -56,7 +62,7 @@ class ValueCNN(nn.Module):
         self.head = nn.Sequential(
             nn.Conv2d(channels, head_channels, 1, bias=False), nn.BatchNorm2d(head_channels), nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(head_channels * 64, fc_hidden), nn.ReLU(),
+            nn.Linear(head_channels * 64, fc_hidden), fc_act,     # v2: leaky, so the layer cannot die
             nn.Linear(fc_hidden, 1), nn.Tanh(),
         )
         for m in self.modules():
@@ -73,7 +79,7 @@ class ValueCNN(nn.Module):
 def model_from_config(cfg: dict[str, Any]) -> ValueCNN:
     m = cfg["model"]
     return ValueCNN(planes=m["planes"], channels=m["channels"], res_blocks=m["res_blocks"],
-                    head_channels=m["head_channels"], fc_hidden=m["fc_hidden"])
+                    head_channels=m["head_channels"], fc_hidden=m["fc_hidden"], head_act=m.get("head_act", "relu"))
 
 
 def save_checkpoint(model: ValueCNN, path: str | Path, extra: dict[str, Any] | None = None) -> None:

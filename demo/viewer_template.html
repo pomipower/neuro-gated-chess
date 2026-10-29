@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neuro-Gated Chess: game replay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --page: #eceef1; --surface: #ffffff; --ink: #1a2230; --ink-2: #4b5565; --ink-3: #828b99; --hair: #dde1e7;
+  --bezel: #232b37; --bezel-ink: #9aa5b5; --sq-light: #e3e7ed; --sq-dark: #9aa8bb;
+  --last: rgba(246, 205, 90, .5);
+  --s1: #3567d6; --s1-soft: #dde6fa; --s2: #d98a1f; --s2-soft: #f8ead3; --sf: #7c8592; --book: #c3cad4;
+  --serif: "Instrument Serif", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --sans: "Manrope", "Segoe UI", system-ui, sans-serif;
+  --shadow: 0 1px 2px rgba(26, 34, 48, .06), 0 8px 24px rgba(26, 34, 48, .06);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page: #12161c; --surface: #1a2029; --ink: #edf1f6; --ink-2: #b3bdca; --ink-3: #7f8a99; --hair: #2a323e;
+    --bezel: #0b0e12; --bezel-ink: #6f7b8c; --sq-light: #a9b4c3; --sq-dark: #66758b;
+    --s1: #6f98ef; --s1-soft: #23324f; --s2: #eba54a; --s2-soft: #3d3022; --sf: #9aa2ad; --book: #3a4452;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px rgba(0, 0, 0, .25);
+  }
+}
+:root[data-theme="dark"] {
+  --page: #12161c; --surface: #1a2029; --ink: #edf1f6; --ink-2: #b3bdca; --ink-3: #7f8a99; --hair: #2a323e;
+  --bezel: #0b0e12; --bezel-ink: #6f7b8c; --sq-light: #a9b4c3; --sq-dark: #66758b;
+  --s1: #6f98ef; --s1-soft: #23324f; --s2: #eba54a; --s2-soft: #3d3022; --sf: #9aa2ad; --book: #3a4452;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px rgba(0, 0, 0, .25);
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 15px/1.55 var(--sans); font-feature-settings: "tnum" 1; }
+button, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--s1); outline-offset: 2px; }
+.wrap { max-width: 1240px; margin: 0 auto; padding: 28px 20px 48px; }
+
+.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 28px; margin-bottom: 26px; }
+.brand { min-width: 0; }
+.brand h1 { font: 400 clamp(1.9rem, 3.4vw, 2.6rem)/1.05 var(--serif); margin: 0; letter-spacing: -.005em; }
+.brand p { margin: 6px 0 0; color: var(--ink-2); max-width: 62ch; }
+.select { position: relative; min-width: 0; flex: 0 1 420px; }
+.select select { width: 100%; appearance: none; background: var(--surface); border: 1px solid var(--hair); border-radius: 10px; padding: 11px 38px 11px 14px; box-shadow: var(--shadow); cursor: pointer; }
+.select::after { content: ""; position: absolute; right: 15px; top: 50%; width: 7px; height: 7px; border-right: 1.5px solid var(--ink-2); border-bottom: 1.5px solid var(--ink-2); transform: translateY(-70%) rotate(45deg); pointer-events: none; }
+
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 420px); gap: 32px; align-items: start; }
+@media (max-width: 920px) { .grid { grid-template-columns: 1fr; } }
+
+.player { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 4px; margin: 0 0 10px; }
+.player.bottom { margin: 10px 0 0; }
+.who-name { display: flex; align-items: center; gap: 10px; font-weight: 600; min-width: 0; }
+.chip { width: 14px; height: 14px; border-radius: 4px; border: 1px solid var(--ink-3); flex: none; }
+.chip.w { background: #fafbfc; } .chip.b { background: #1a2230; }
+.meta { color: var(--ink-3); font-size: .9rem; white-space: nowrap; }
+
+.bezel { background: var(--bezel); border-radius: 14px; padding: 22px; box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, .06); position: relative; }
+.board { position: relative; aspect-ratio: 1; width: 100%; border-radius: 3px; overflow: hidden; }
+.squares { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); }
+.sq.l { background: var(--sq-light); } .sq.d { background: var(--sq-dark); }
+.sq.last { box-shadow: inset 0 0 0 999px var(--last); }
+.pieces, .arrows { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.arrows { z-index: 2; }
+.pieces { z-index: 1; }
+.pc { position: absolute; width: 12.5%; height: 12.5%; padding: 1.2%; }
+.pc svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .18)); }
+.pc.glide { transition: transform .26s cubic-bezier(.2, .7, .2, 1); }
+.files, .ranks { position: absolute; display: flex; color: var(--bezel-ink); font-size: 11px; font-weight: 600; }
+.files { left: 22px; right: 22px; bottom: 3px; } .files span { flex: 1; text-align: center; }
+.ranks { top: 22px; bottom: 22px; left: 0; width: 22px; flex-direction: column; } .ranks span { flex: 1; display: grid; place-items: center; }
+
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; }
+.btn { background: var(--surface); border: 1px solid var(--hair); border-radius: 10px; min-width: 42px; height: 40px; padding: 0 12px; cursor: pointer; display: inline-grid; place-items: center; }
+.btn:hover { border-color: var(--ink-3); }
+.btn.play { background: var(--ink); color: var(--page); border-color: var(--ink); min-width: 96px; font-weight: 600; }
+.btn svg { width: 14px; height: 14px; }
+.controls .grow { flex: 1; }
+.seg { display: inline-flex; border: 1px solid var(--hair); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.seg button { border: 0; background: none; height: 38px; padding: 0 12px; cursor: pointer; color: var(--ink-2); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--page); }
+
+.col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.card { background: var(--surface); border: 1px solid var(--hair); border-radius: 14px; padding: 20px 20px 18px; box-shadow: var(--shadow); }
+.card h2 { font: 600 .95rem/1.3 var(--sans); margin: 0 0 4px; }
+.card .hint { color: var(--ink-3); font-size: .86rem; margin: 0 0 14px; }
+.mover { color: var(--ink-2); font-size: .92rem; margin: 0; }
+.mover b { color: var(--ink); font-weight: 600; }
+.verdict { font: 400 clamp(2rem, 3.2vw, 2.5rem)/1.05 var(--serif); margin: 6px 0 8px; }
+.verdict.s1 { color: var(--s1); } .verdict.s2 { color: var(--s2); } .verdict.n { color: var(--ink-2); }
+.why { margin: 0; color: var(--ink-2); }
+.override { display: none; margin-top: 14px; padding: 10px 12px; border-radius: 10px; background: var(--s2-soft); font-size: .92rem; }
+.override.on { display: block; }
+.gauge { margin-top: 18px; }
+.gauge-row { display: flex; justify-content: space-between; font-size: .85rem; color: var(--ink-2); }
+.track { position: relative; height: 8px; border-radius: 4px; margin: 28px 0 8px; background: var(--hair); }
+.track .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; transition: width .3s ease; }
+.track .tau { position: absolute; top: -7px; bottom: -7px; border-left: 2px solid var(--ink); }
+.track .tau i { position: absolute; bottom: 100%; left: 0; transform: translateX(-50%); margin-bottom: 4px; font-style: normal; font-size: .75rem; color: var(--ink-2); white-space: nowrap; }
+.gauge-ends { display: flex; justify-content: space-between; font-size: .78rem; color: var(--ink-3); }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0 0; padding-top: 14px; border-top: 1px solid var(--hair); }
+.stats dt { font-size: .78rem; color: var(--ink-3); }
+.stats dd { margin: 2px 0 0; font-weight: 600; }
+
+.cands { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+.cand { display: grid; grid-template-columns: 64px 1fr 56px; align-items: center; gap: 10px; }
+.cand .mv { font-weight: 600; white-space: nowrap; }
+.cand .bar { height: 8px; border-radius: 4px; background: var(--hair); overflow: hidden; }
+.cand .bar span { display: block; height: 100%; border-radius: 4px; }
+.cand .val { text-align: right; color: var(--ink-2); font-size: .9rem; }
+.cand.played .mv::after { content: " ✓"; color: var(--ink-3); font-weight: 500; }
+.pv-label { margin: 16px 0 6px; font-size: .86rem; color: var(--ink-3); }
+.line { display: flex; flex-wrap: wrap; gap: 6px; }
+.line span { padding: 3px 9px; border-radius: 999px; background: var(--s2-soft); font-size: .88rem; font-weight: 600; }
+.line span.opp { background: var(--page); color: var(--ink-2); font-weight: 500; }
+.empty-note { color: var(--ink-3); font-size: .9rem; margin: 0; }
+.mismatch { color: var(--ink-3); font-size: .8rem; margin: 12px 0 0; }
+
+.timeline { margin-top: 36px; }
+.timeline-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 20px; margin-bottom: 12px; }
+.timeline-head h2 { font: 400 1.7rem/1.1 var(--serif); margin: 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: .85rem; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.strip { display: flex; align-items: flex-end; gap: 3px; height: 132px; padding: 14px 2px 0; border-bottom: 1px solid var(--hair); overflow-x: auto; }
+.strip button { flex: 1 0 5px; min-width: 5px; max-width: 16px; border: 0; padding: 0; border-radius: 3px 3px 1px 1px; cursor: pointer; opacity: .78; transition: opacity .15s; position: relative; }
+.strip button:hover { opacity: 1; }
+.strip button.cur { opacity: 1; box-shadow: 0 0 0 2px var(--page), 0 0 0 3.5px var(--ink); }
+.strip button.ov::before { content: ""; position: absolute; left: 50%; top: -10px; width: 6px; height: 6px; border-radius: 50%; background: var(--s2); transform: translateX(-50%); }
+.strip .s1 { background: var(--s1); } .strip .s2 { background: var(--s2); } .strip .sf { background: var(--sf); } .strip .book { background: var(--book); }
+.strip-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; color: var(--ink-3); font-size: .8rem; margin-top: 6px; }
+.sides { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px 32px; margin-top: 26px; }
+.side h3 { margin: 0 0 8px; font: 600 .95rem var(--sans); }
+.split { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--hair); }
+.split .a { background: var(--s1); } .split .b { background: var(--s2); }
+.side p { margin: 8px 0 0; color: var(--ink-2); font-size: .9rem; }
+footer { margin-top: 36px; padding-top: 16px; border-top: 1px solid var(--hair); color: var(--ink-3); font-size: .82rem; max-width: 90ch; }
+.nodata { padding: 60px 0; text-align: center; color: var(--ink-2); }
+@media (max-width: 520px) {
+  .wrap { padding: 20px 14px 40px; }
+  .bezel { padding: 16px; border-radius: 12px; }
+  .files { left: 16px; right: 16px; bottom: 1px; font-size: 10px; } .ranks { top: 16px; bottom: 16px; width: 16px; font-size: 10px; }
+  .seg button { padding: 0 9px; }
+}
+@media (prefers-reduced-motion: reduce) { .pc.glide, .track .fill { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">
+      <h1>When does the bot stop to think?</h1>
+      <p>Replays of real games. Each move is played either on instinct by LayaChess, or after a search that looks ahead with our value network. Games marked ★ include the full thought process.</p>
+    </div>
+    <div class="select"><select id="game" aria-label="Choose a game"></select></div>
+  </div>
+
+  <div class="grid" id="grid">
+    <section aria-label="Board">
+      <div class="player"><span class="who-name"><span class="chip b" id="chipTop"></span><span id="nameTop"></span></span><span class="meta" id="result"></span></div>
+      <div class="bezel">
+        <div class="board" id="board" role="img" aria-label="Chess board">
+          <div class="squares" id="squares"></div>
+          <div class="pieces" id="pieces"></div>
+          <svg class="arrows" id="arrows" viewBox="0 0 8 8" aria-hidden="true"></svg>
+        </div>
+        <div class="files" id="files"></div><div class="ranks" id="ranks"></div>
+      </div>
+      <div class="player bottom"><span class="who-name"><span class="chip w" id="chipBot"></span><span id="nameBot"></span></span><span class="meta" id="moveNo"></span></div>
+      <div class="controls">
+        <button class="btn" id="bStart" aria-label="Go to start"><svg viewBox="0 0 16 16"><path d="M3 2v12" stroke="currentColor" stroke-width="2"/><path d="M14 2 6 8l8 6z" fill="currentColor"/></svg></button>
+        <button class="btn" id="bPrev" aria-label="Previous move"><svg viewBox="0 0 16 16"><path d="M12 2 4 8l8 6z" fill="currentColor"/></svg></button>
+        <button class="btn play" id="bPlay">Play</button>
+        <button class="btn" id="bNext" aria-label="Next move"><svg viewBox="0 0 16 16"><path d="m4 2 8 6-8 6z" fill="currentColor"/></svg></button>
+        <button class="btn" id="bEnd" aria-label="Go to end"><svg viewBox="0 0 16 16"><path d="M13 2v12" stroke="currentColor" stroke-width="2"/><path d="m2 2 8 6-8 6z" fill="currentColor"/></svg></button>
+        <span class="grow"></span>
+        <div class="seg" role="group" aria-label="Playback speed">
+          <button data-speed="1800" aria-pressed="false">Slow</button><button data-speed="1000" aria-pressed="true">Normal</button><button data-speed="450" aria-pressed="false">Fast</button>
+        </div>
+        <button class="btn" id="bFlip">Flip</button>
+      </div>
+    </section>
+
+    <div class="col">
+      <section class="card" aria-live="polite">
+        <p class="mover" id="mover"></p>
+        <p class="verdict" id="verdict"></p>
+        <p class="why" id="why"></p>
+        <div class="override" id="override"></div>
+        <div class="gauge" id="gauge">
+          <div class="gauge-row"><span>Laya's confidence</span><span id="confVal"></span></div>
+          <div class="track"><div class="fill" id="fill"></div><div class="tau" id="tau"><i id="tauLbl"></i></div></div>
+          <div class="gauge-ends"><span>Unsure, so search</span><span>Sure, play instantly</span></div>
+        </div>
+        <dl class="stats">
+          <div><dt>Thinking time</dt><dd id="sTime"></dd></div>
+          <div><dt>Simulations</dt><dd id="sSims"></dd></div>
+          <div><dt>Move</dt><dd id="sMove"></dd></div>
+        </dl>
+      </section>
+
+      <section class="card" id="cardLaya">
+        <h2>Laya's shortlist</h2>
+        <p class="hint">Win chance it gives each candidate at a glance.</p>
+        <ul class="cands" id="layaList"></ul>
+      </section>
+
+      <section class="card" id="cardSearch">
+        <h2>Where the search spent its effort</h2>
+        <p class="hint">Share of simulations given to each move.</p>
+        <ul class="cands" id="searchList"></ul>
+        <p class="pv-label">Line it expects</p>
+        <div class="line" id="pv"></div>
+        <p class="mismatch" id="mismatch"></p>
+      </section>
+    </div>
+  </div>
+
+  <section class="timeline" aria-label="Thinking across the game">
+    <div class="timeline-head">
+      <h2>The whole game at a glance</h2>
+      <div class="legend">
+        <span><i style="background:var(--s1)"></i>Instinct</span>
+        <span><i style="background:var(--s2)"></i>Searched</span>
+        <span><i style="background:var(--sf)"></i>Stockfish</span>
+        <span><i style="background:var(--book)"></i>Fixed opening</span>
+      </div>
+    </div>
+    <div class="strip" id="strip"></div>
+    <div class="strip-foot"><span>Bar height is thinking time. A dot marks a move where the search overrode Laya. Click a bar to see that decision.</span><span id="stripCount"></span></div>
+    <div class="sides" id="sides"></div>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+
+<script id="data" type="application/json">/*__DATA__*/</script>
+<script>
+(() => {
+  const DATA = JSON.parse(document.getElementById("data").textContent);
+  const NICE = {
+    laya_only: "Laya only", always_s2: "Always search", mcts_uniform: "Search without Laya",
+    hybrid_s2_10: "Hybrid (searches 10%)", hybrid_s2_25: "Hybrid (searches 25%)", hybrid_s2_50: "Hybrid (searches 50%)",
+    hybrid_s2_75: "Hybrid (searches 75%)", random_s2_25: "Random gate (25%)", random_s2_50: "Random gate (50%)",
+  };
+  const nice = a => NICE[a] || (a && a.startsWith("sf_elo_") ? `Stockfish ${a.slice(7)}` : a);
+  const short = a => a.startsWith("hybrid_s2_") ? `Hybrid ${a.slice(10)}%` : a.startsWith("random_s2_") ? `Random ${a.slice(10)}%` : nice(a);
+  const $ = id => document.getElementById(id);
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let game = null, idx = 0, flipped = false, timer = null, speed = 1000;
+
+  const GLYPH = { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟" };
+  const pieceSvg = c => {
+    const key = (c === c.toUpperCase() ? "w" : "b") + c.toUpperCase();
+    return DATA.pieces && DATA.pieces[key] ? DATA.pieces[key]
+      : `<svg viewBox="0 0 45 45"><text x="22.5" y="36" text-anchor="middle" font-size="36" fill="${c === c.toUpperCase() ? "#fff" : "#111"}" stroke="#111" stroke-width=".8">${GLYPH[c.toLowerCase()]}</text></svg>`;
+  };
+  const fmtMs = ms => ms == null ? "–" : ms >= 1000 ? (ms / 1000).toFixed(2) + " s" : Math.round(ms) + " ms";
+  const sqXY = sq => { const f = sq.charCodeAt(0) - 97, r = +sq[1] - 1; return flipped ? [7 - f, r] : [f, 7 - r]; };
+
+  function parseFen(fen) {
+    const out = {};
+    fen.split(" ")[0].split("/").forEach((row, i) => { let f = 0; for (const c of row) { if (/\d/.test(c)) f += +c; else { out["abcdefgh"[f] + (8 - i)] = c; f++; } } });
+    return out;
+  }
+
+  function drawSquares() {
+    const s = $("squares"); s.innerHTML = "";
+    for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) {
+      const f = flipped ? 7 - x : x, r = flipped ? y : 7 - y, d = document.createElement("div");
+      d.className = "sq " + ((f + r) % 2 ? "l" : "d"); d.dataset.sq = "abcdefgh"[f] + (r + 1); s.appendChild(d);
+    }
+    $("files").innerHTML = [..."abcdefgh"].map((c, i) => `<span>${flipped ? "hgfedcba"[i] : c}</span>`).join("");
+    $("ranks").innerHTML = [...Array(8)].map((_, i) => `<span>${flipped ? i + 1 : 8 - i}</span>`).join("");
+  }
+
+  function drawPieces(fen, move, animate) {
+    const layer = $("pieces"), pos = parseFen(fen);
+    layer.innerHTML = "";
+    for (const [sq, c] of Object.entries(pos)) {
+      const [x, y] = sqXY(sq), el = document.createElement("div");
+      el.className = "pc"; el.style.left = x * 12.5 + "%"; el.style.top = y * 12.5 + "%"; el.innerHTML = pieceSvg(c);
+      if (animate && move && sq === move.slice(2, 4) && !reduce) {
+        const [fx, fy] = sqXY(move.slice(0, 2));
+        el.style.transform = `translate(${(fx - x) * 100}%, ${(fy - y) * 100}%)`;
+        requestAnimationFrame(() => requestAnimationFrame(() => { el.classList.add("glide"); el.style.transform = "translate(0,0)"; }));
+      }
+      layer.appendChild(el);
+    }
+    document.querySelectorAll(".sq").forEach(d => d.classList.toggle("last", !!move && (d.dataset.sq === move.slice(0, 2) || d.dataset.sq === move.slice(2, 4))));
+  }
+
+  function arrow(uci, color, width, opacity, dashed) {
+    const [x1, y1] = sqXY(uci.slice(0, 2)), [x2, y2] = sqXY(uci.slice(2, 4));
+    const ax = x1 + .5, ay = y1 + .5, bx = x2 + .5, by = y2 + .5, len = Math.hypot(bx - ax, by - ay) || 1;
+    const ux = (bx - ax) / len, uy = (by - ay) / len, head = .34, ex = bx - ux * head, ey = by - uy * head;
+    const px = -uy * head * .6, py = ux * head * .6;
+    return `<g opacity="${opacity}"><line x1="${ax}" y1="${ay}" x2="${ex}" y2="${ey}" stroke="${color}" stroke-width="${width}" stroke-linecap="round"${dashed ? ' stroke-dasharray=".2 .16"' : ""}/>` +
+      `<polygon points="${bx},${by} ${ex + px},${ey + py} ${ex - px},${ey - py}" fill="${color}"/></g>`;
+  }
+
+  // Arrows show the thinking behind the NEXT move (what the bot is weighing in the position on the board).
+  function drawArrows() {
+    const css = getComputedStyle(document.documentElement);
+    const S1 = css.getPropertyValue("--s1").trim(), S2 = css.getPropertyValue("--s2").trim();
+    const next = game.plies[idx];
+    let out = "";
+    if (next && (next.kind === "s1" || next.kind === "s2")) {
+      const t = next.thought;
+      if (t && t.laya) t.laya.slice(0, 3).forEach((c, i) => { if (c[0] !== next.uci && c[0] !== t.laya_best) out += arrow(c[0], S1, .09, [.5, .32, .2][i], false); });
+      if (t && next.kind === "s2" && t.override && t.laya_best) out += arrow(t.laya_best, S1, .12, .85, true);
+      out += arrow(next.uci, next.kind === "s2" ? S2 : S1, .16, .92, false);
+    }
+    $("arrows").innerHTML = out;
+  }
+
+  const candRow = (label, val, frac, color, played, title) =>
+    `<li class="cand${played ? " played" : ""}"${title ? ` title="${title}"` : ""}><span class="mv">${label}</span><span class="bar"><span style="width:${Math.max(3, frac * 100)}%;background:${color}"></span></span><span class="val">${val}</span></li>`;
+
+  function renderThought(p) {
+    const cl = $("cardLaya"), cs = $("cardSearch");
+    if (!p || !(p.kind === "s1" || p.kind === "s2")) { cl.style.display = cs.style.display = "none"; return; }
+    cl.style.display = "";
+    const t = p.thought;
+    if (!t) {
+      $("layaList").innerHTML = `<p class="empty-note">The thought process was not recorded for this game. Pick a game marked "with thought process", or run scripts/explain_game.py for this one.</p>`;
+      cs.style.display = "none"; return;
+    }
+    if (t.laya) {
+      const max = Math.max(...t.laya.map(c => c[2]));
+      $("layaList").innerHTML = t.laya.map(c => candRow(c[1], (c[2] * 100).toFixed(1) + "%", c[2] / max, "var(--s1)", c[0] === p.uci)).join("");
+    } else $("layaList").innerHTML = `<p class="empty-note">This bot plays without Laya.</p>`;
+    if (t.search && p.kind === "s2") {
+      cs.style.display = "";
+      $("searchList").innerHTML = t.search.visits.map(v => candRow(v[1], Math.round(v[3] * 100) + "%", v[3], "var(--s2)", v[0] === p.uci, `${v[2]} of ${t.search.sims} simulations`)).join("");
+      $("pv").innerHTML = (t.search.pv || []).map((m, i) => `<span class="${i % 2 ? "opp" : ""}">${m}</span>`).join("");
+      $("mismatch").textContent = t.matches ? "" : "Note: re-running the search gave a different move here than in the original game (GPU rounding on a near-tie).";
+    } else cs.style.display = "none";
+  }
+
+  // The board shows the position now; the panel and arrows show the decision about to be made (game.plies[idx]).
+  function render(animate) {
+    const prev = idx > 0 ? game.plies[idx - 1] : null, p = game.plies[idx] || null;
+    drawPieces(prev ? prev.fen : game.start_fen, prev ? prev.uci : null, animate);
+    drawArrows();
+    $("moveNo").textContent = p ? `Move ${Math.floor(idx / 2) + 1} of ${Math.ceil(game.plies.length / 2)}` : "Final position";
+    document.querySelectorAll(".strip button").forEach((b, i) => b.classList.toggle("cur", i === idx));
+    const v = $("verdict"), ov = $("override"), gauge = $("gauge");
+    ov.classList.remove("on");
+    if (!p) {
+      $("mover").textContent = "Game over";
+      v.className = "verdict n"; v.textContent = game.result === "1/2-1/2" ? "Draw" : (game.result === "1-0" ? "White wins" : "Black wins");
+      $("why").textContent = game.termination ? "Ended by " + game.termination.replace(/_/g, " ") + "." : "";
+      gauge.style.display = "none"; ["sTime", "sSims", "sMove"].forEach(k => $(k).textContent = "–"); renderThought(null); return;
+    }
+    $("mover").innerHTML = `${p.white ? "White" : "Black"} to move: <b>${nice(p.agent)}</b>`;
+    if (p.kind === "book") { v.className = "verdict n"; v.textContent = "Opening book"; $("why").textContent = "Every game starts from the same fixed opening, so the comparison is fair."; }
+    else if (p.kind === "sf") { v.className = "verdict n"; v.textContent = "Stockfish to move"; $("why").textContent = "The reference opponent, at a fixed strength."; }
+    else if (p.kind === "s1") { v.className = "verdict s1"; v.textContent = "Plays on instinct"; $("why").textContent = p.tau != null ? "Laya is confident enough, so the bot skips the search." : "This bot never searches; it always trusts Laya."; }
+    else { v.className = "verdict s2"; v.textContent = "Stops to think"; $("why").textContent = p.agent === "mcts_uniform" ? "This bot always searches, without Laya's guidance." : p.tau != null ? "Laya is unsure, so the bot looks ahead before committing." : "This bot searches before every move."; }
+    const t = p.thought;
+    if (t && p.kind === "s2" && t.override && t.laya) {
+      const fav = t.laya.find(c => c[0] === t.laya_best);
+      ov.innerHTML = `<b>Override.</b> Laya's favourite is ${fav ? fav[1] : t.laya_best}, but after ${t.search ? t.search.sims : "its"} simulations the search prefers ${p.san}.`;
+      ov.classList.add("on");
+    }
+    if (p.conf != null && (p.kind === "s1" || p.kind === "s2")) {
+      gauge.style.display = "";
+      const sc = DATA.conf_scale;
+      $("fill").style.width = Math.min(100, p.conf / sc * 100) + "%"; $("fill").style.background = p.kind === "s2" ? "var(--s2)" : "var(--s1)";
+      $("confVal").textContent = p.conf.toFixed(3);
+      if (p.tau != null) { $("tau").style.display = ""; $("tau").style.left = Math.min(100, p.tau / sc * 100) + "%"; $("tauLbl").textContent = "gate " + p.tau.toFixed(3); }
+      else $("tau").style.display = "none";
+    } else gauge.style.display = "none";
+    $("sTime").textContent = fmtMs(p.ms);
+    $("sSims").textContent = p.sims ? p.sims.toLocaleString() : "0";
+    $("sMove").textContent = p.san;
+    renderThought(p);
+  }
+
+  function buildStrip() {
+    const s = $("strip"); s.innerHTML = "";
+    const lg = game.plies.map(p => Math.log10(1 + (p.ms || 1))), max = Math.max(...lg, 1);
+    game.plies.forEach((p, i) => {
+      const b = document.createElement("button");
+      b.className = p.kind + (p.thought && p.thought.override && p.kind === "s2" ? " ov" : "");
+      b.style.height = Math.max(5, lg[i] / max * 100) + "%";
+      b.title = `${Math.floor(i / 2) + 1}${p.white ? "." : "…"} ${p.san}: ${p.kind === "s2" ? "searched" : p.kind === "s1" ? "instinct" : p.kind === "sf" ? "Stockfish" : "opening"}, ${fmtMs(p.ms)}`;
+      b.setAttribute("aria-label", b.title);
+      b.onclick = () => { stop(); idx = i; render(false); };
+      s.appendChild(b);
+    });
+    const ovs = game.plies.filter(p => p.kind === "s2" && p.thought && p.thought.override).length;
+    $("stripCount").textContent = `${game.plies.length} moves` + (game.explained ? `, ${ovs} override${ovs === 1 ? "" : "s"}` : "");
+  }
+
+  function buildSides() {
+    $("sides").innerHTML = [true, false].map(white => {
+      const name = white ? game.white : game.black;
+      const ps = game.plies.filter(p => p.white === white && (p.kind === "s1" || p.kind === "s2"));
+      if (!ps.length) return `<div class="side"><h3>${white ? "White" : "Black"}: ${nice(name)}</h3><p>Reference opponent.</p></div>`;
+      const s2 = ps.filter(p => p.kind === "s2").length, s1 = ps.length - s2, avg = ps.reduce((a, p) => a + (p.ms || 0), 0) / ps.length;
+      return `<div class="side"><h3>${white ? "White" : "Black"}: ${nice(name)}</h3>
+        <div class="split" role="img" aria-label="${s1} on instinct, ${s2} searched"><div class="a" style="width:${s1 / ps.length * 100}%"></div><div class="b" style="width:${s2 / ps.length * 100}%"></div></div>
+        <p>${s1} on instinct, ${s2} searched (${Math.round(s2 / ps.length * 100)}%). ${fmtMs(avg)} per move on average.</p></div>`;
+    }).join("");
+  }
+
+  function setNames() {
+    const top = flipped ? game.white : game.black, bot = flipped ? game.black : game.white;
+    $("nameTop").textContent = nice(top); $("nameBot").textContent = nice(bot);
+    $("chipTop").className = "chip " + (flipped ? "w" : "b"); $("chipBot").className = "chip " + (flipped ? "b" : "w");
+  }
+  function load(i) {
+    stop(); game = DATA.games[i]; idx = 0;
+    $("result").textContent = game.result + (game.termination ? ", " + game.termination.replace(/_/g, " ") : "");
+    setNames(); drawSquares(); buildStrip(); buildSides(); render(false);
+  }
+  function stop() { clearInterval(timer); timer = null; $("bPlay").textContent = "Play"; }
+  function play() {
+    if (timer) return stop();
+    if (idx >= game.plies.length) idx = 0;
+    $("bPlay").textContent = "Pause";
+    const tick = () => { if (idx >= game.plies.length) return stop(); idx++; render(true); };
+    timer = setInterval(tick, speed);
+  }
+
+  if (!DATA.games.length) { $("grid").innerHTML = '<p class="nodata">No games in this file. Run scripts/export_games.py on a tournament run.</p>'; return; }
+  const sel = $("game");
+  DATA.games.forEach((g, i) => { const o = document.createElement("option"); o.value = i; o.textContent = `${g.explained ? "★ " : ""}${short(g.white)} vs ${short(g.black)}, ${g.result}`; sel.appendChild(o); });
+  sel.onchange = () => load(+sel.value);
+  $("bStart").onclick = () => { stop(); idx = 0; render(false); };
+  $("bEnd").onclick = () => { stop(); idx = game.plies.length; render(false); };
+  $("bPrev").onclick = () => { stop(); idx = Math.max(0, idx - 1); render(false); };
+  $("bNext").onclick = () => { stop(); if (idx < game.plies.length) { idx++; render(true); } };
+  $("bPlay").onclick = play;
+  $("bFlip").onclick = () => { flipped = !flipped; setNames(); drawSquares(); render(false); };
+  document.querySelectorAll(".seg button").forEach(b => b.onclick = () => {
+    document.querySelectorAll(".seg button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); speed = +b.dataset.speed;
+    if (timer) { stop(); play(); }
+  });
+  document.addEventListener("keydown", e => {
+    if (e.target.tagName === "SELECT") return;
+    if (e.key === "ArrowRight") $("bNext").click(); else if (e.key === "ArrowLeft") $("bPrev").click();
+    else if (e.key === " ") { e.preventDefault(); play(); }
+  });
+  $("foot").textContent = DATA.note + " Chess pieces: cburnett set by Colin M.L. Burnett (GPLv2+).";
+  load(0);
+})();
+</script>
+</body>
+</html>

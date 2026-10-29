@@ -1,0 +1,16 @@
+override v3.laya_lookahead = 3
+[v2] tablebases: up to 5 pieces
+Fetching 6 files:   0%|          | 0/6 [00:00<?, ?it/s]Fetching 6 files: 100%|██████████| 6/6 [00:00<00:00, 439.65it/s]
+[laya-chess] datafreak/laya-chess (final, step 32000, 2,048,000 examples) on cuda/float16 in 2.9s
+
+400 validation positions
+            acpl  blunder_rate  sec_per_move  search_rate  override_rate  critical_rate
+agent                                                                                 
+v2_full  60.305         0.088         1.187          0.6          0.082            0.6
+v3_full  56.522         0.080         1.674          0.6          0.080            0.6
+
+by phase (ACPL):
+ phase    endgame  middlegame  opening
+agent                                
+v2_full     35.8        73.3     44.4
+v3_full     35.8        70.5     33.0

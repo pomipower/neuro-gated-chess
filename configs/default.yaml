@@ -9,9 +9,9 @@ data:
   benchmark_dir: data/benchmark
   # Lichess Elite Database monthly files (https://database.nikonoel.fr/). Fill in once downloaded.
   # Use the three roles on DISJOINT months; the most recent months should be val and test.
-  train_months: []            # e.g. ["2026-03", "2026-04", ...]
-  val_month: null             # e.g. "2026-08"
-  test_month: null            # e.g. "2026-09"
+  train_months: ["2025-04", "2025-05", "2025-06", "2025-07", "2025-08", "2025-09"]
+  val_month: "2025-10"
+  test_month: "2025-11"
   min_plies: 20
   max_train_positions: 500000
   n_val_net: 20000            # val positions for value-net early stopping
@@ -31,20 +31,20 @@ model:
   head_channels: 32
   fc_hidden: 256
   checkpoint: src/model/checkpoints/best_model.pt
-  color_flip_augmentation: false
+  color_flip_augmentation: true
 
 train:
   epochs: 20
   batch_size: 256
   lr: 1.0e-3
-  weight_decay: 1.0e-4
+  weight_decay: 1.0e-3
   scheduler: cosine
   num_workers: 2
   device: cuda                # falls back to cpu if unavailable
 
 laya:
   model_name: datafreak/laya-chess
-  revision: null              # pin a Hugging Face commit hash once chosen
+  revision: 9269e61202b2c3517fef1cdacea83c3c23b92961              # pin a Hugging Face commit hash once chosen
   device: cuda
   confidence: margin          # overwritten by configs/gate_frozen.yaml after calibration
   temperature: 0.1
@@ -55,7 +55,7 @@ mcts:
   simulations: 400            # raise to 800 only if the pilot timing allows
   c_puct: 1.5
   fpu_reduction: 0.2
-  prior_temperature: 0.3
+  prior_temperature: 0.01
   tree_reuse: false
 
 judge:                        # Stockfish used to score moves (not a competitor)
@@ -90,7 +90,7 @@ tournament:
   opening_eval_band_cp: 100
   max_plies: 300
   anchors:                    # set after the pilot (protocol §3); UCI_Elo range is 1320-3190
-    elos: [1500, 1700, 1900]
+    elos: [1320]
     movetime_ms: 100
     threads: 1
     hash_mb: 64

@@ -69,3 +69,59 @@ def test_root_prior_shapes_search() -> None:
     assert result.move == favourite
     assert result.visits[favourite] == max(result.visits.values())
     assert result.cnn_evals >= 1 and result.max_depth >= 1
+
+
+@skip_if_not_implemented
+def test_principal_variation_and_q_are_reported() -> None:
+    from src.mcts.SearchTree import SearchTree
+
+    board = chess.Board(MATE_IN_ONE)
+    result = SearchTree(value_fn=lambda b: 0.0, simulations=50).search(board)
+    assert result.pv[0] == result.move
+    assert result.q[result.move] == 1.0                      # mate found: the mover wins
+    replay = board.copy()
+    for mv in result.pv:
+        assert mv in replay.legal_moves
+        replay.push(mv)
+
+
+@skip_if_not_implemented
+def test_v2_contempt_avoids_repetition_when_better() -> None:
+    """With contempt, a root move that repeats is scored as a draw worth -contempt to the mover."""
+    from src.mcts.SearchTree import SearchTree
+
+    board = chess.Board()
+    rep = {chess.Move.from_uci("g1f3")}
+    scores = {m: (0.6 if m in rep else 0.5) for m in board.legal_moves}      # Laya prefers the repeating move
+    plain = SearchTree(value_fn=lambda b: 0.3, simulations=200, prior_temperature=0.3).search(board, root_scores=scores)
+    avoid = SearchTree(value_fn=lambda b: 0.3, simulations=200, prior_temperature=0.3).search(
+        board, root_scores=scores, repeat_moves=rep, contempt=0.5)
+    assert plain.move in rep
+    assert avoid.move not in rep
+
+
+@skip_if_not_implemented
+def test_v2_interior_prior_and_leaf_adjust_are_used() -> None:
+    from src.engine.tactics import adjust_value, quiescence_shift, tactical_prior
+    from src.mcts.SearchTree import SearchTree
+
+    calls = {"prior": 0, "leaf": 0}
+
+    def prior(b, moves):
+        calls["prior"] += 1
+        return tactical_prior(b, moves)
+
+    def leaf(b, v):
+        calls["leaf"] += 1
+        return adjust_value(v, quiescence_shift(b))
+
+    from src.engine.tactics import material
+
+    def value(b):           # white-perspective material value, like a (perfect) material-only network
+        return max(-1.0, min(1.0, material(b, chess.WHITE) / 1000))
+
+    # White can win the hanging queen: the search must find Nxd5.
+    board = chess.Board("4k3/8/8/3q4/8/4N3/8/4K3 w - - 0 1")
+    res = SearchTree(value, simulations=100, interior_prior_fn=prior, leaf_adjust_fn=leaf).search(board)
+    assert res.move == chess.Move.from_uci("e3d5")
+    assert calls["prior"] > 0 and calls["leaf"] > 0

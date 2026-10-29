@@ -1,0 +1,7 @@
+TEST evaluation of the frozen gate (logistic), n=2000
+never 76.60  always 64.93  critical gate (58.7%) 67.37
+ rate_pct  achieved_rate  learned_acpl  random_acpl_expected  random_minus_learned  ci_lo  ci_hi  p_one_sided  oracle_acpl
+       10          0.100        74.100                75.435                 1.324 -1.195  3.866        0.149       57.133
+       25          0.258        71.116                73.597                 2.492 -0.864  5.840        0.069       53.384
+       60          0.598        66.414                69.627                 3.203  0.085  6.675        0.022       53.384
+random_minus_learned > 0 with CI above 0 = the learned gate beats a random gate at the same rate

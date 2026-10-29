@@ -1,0 +1,18 @@
+            agent    acpl  blunder_rate  top1  s2_rate  cost_ms    n  recovery_R
+        laya_only 107.855         0.173 0.262    0.000  468.258 3000         NaN
+        always_s2 103.065         0.166 0.270    1.000 1499.294 3000         NaN
+     mcts_uniform 235.409         0.424 0.177    1.000 1041.774 3000         NaN
+     hybrid_s2_10 107.765         0.173 0.263    0.105  576.991 3000       0.019
+random_matched_10 107.375         0.172 0.263    0.105  576.636 3000         NaN
+     hybrid_s2_25 107.032         0.172 0.264    0.250  728.550 3000       0.172
+random_matched_25 106.651         0.171 0.264    0.250  725.672 3000         NaN
+     hybrid_s2_50 105.449         0.170 0.268    0.521 1007.987 3000       0.502
+random_matched_50 105.359         0.169 0.266    0.520 1003.982 3000         NaN
+     hybrid_s2_75 103.979         0.168 0.268    0.759 1253.412 3000       0.809
+random_matched_75 104.263         0.168 0.268    0.758 1250.005 3000         NaN
+ rate_pct  achieved_s2_rate  random_minus_hybrid_acpl_diff  random_minus_hybrid_acpl_lo  random_minus_hybrid_acpl_hi  random_minus_hybrid_acpl_p_one_sided  p_holm
+       10            0.1047                        -0.0900                      -1.8213                       0.6942                                0.7551     NaN
+       25            0.2497                        -0.1747                      -2.1152                       1.3500                                0.6527     1.0
+       50            0.5207                         0.8963                      -2.2808                       1.9239                                0.5282     1.0
+       75            0.7590                        -1.0767                      -1.6337                       2.0648                                0.3758     NaN
+figures written to /home/burner/Chess/neuro-gated-chess-build/neuro-gated-chess/paper/figures

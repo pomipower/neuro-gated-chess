@@ -1,0 +1,10 @@
+group,level,s2_rate,n
+phase,opening,0.7466666666666667,600
+phase,middlegame,0.5227777777777778,1800
+phase,endgame,0.28833333333333333,600
+"forcedness (SF best − 2nd, cp)",≤25,0.62619449128724,1779
+"forcedness (SF best − 2nd, cp)",25–100,0.47265625,768
+"forcedness (SF best − 2nd, cp)",100–300,0.2328767123287671,292
+"forcedness (SF best − 2nd, cp)",>300,0.10559006211180125,161
+source,game positions (Study A),0.5206666666666667,3000
+source,tactical puzzles (Study C),0.184,1000

@@ -1,0 +1,16 @@
+agent,phase,acpl,blunder_rate,n
+laya_only,endgame,110.43,0.18,400
+laya_only,middlegame,124.89166666666667,0.19833333333333333,1200
+laya_only,opening,73.7675,0.095,400
+v2_always,endgame,57.895,0.1125,400
+v2_always,middlegame,73.13833333333334,0.10416666666666667,1200
+v2_always,opening,47.3275,0.04,400
+v2_full,endgame,57.895,0.1125,400
+v2_full,middlegame,76.96916666666667,0.11,1200
+v2_full,opening,48.06,0.0425,400
+v2_safe,endgame,79.3125,0.135,400
+v2_safe,middlegame,82.84083333333334,0.12583333333333332,1200
+v2_safe,opening,55.18,0.0575,400
+v3_look4,endgame,57.895,0.1125,400
+v3_look4,middlegame,73.2975,0.1,1200
+v3_look4,opening,44.4675,0.04,400

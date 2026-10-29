@@ -1,0 +1,24 @@
+\section{Research Questions and Hypotheses}
+\label{sec:hyp}
+\paragraph*{Questions} (RQ1) Does adding search to System~1 improve move quality, and at what cost? (RQ2) Is System~1's confidence informative about its own errors and about where search will be triggered? (RQ3) Does a confidence gate recover the benefit of search at lower cost than a random gate? (RQ4) Does the hybrid play stronger chess than System~1 alone?
+
+\paragraph*{Hypotheses} The project's protocol specifies six hypotheses, summarised with their criteria in Table~\ref{tab:hyp}. The protocol is \emph{self-registered}: it is in the earliest commit of the supplied repository, before the gate freeze and every test run, but it was not deposited with an external registry~\cite{nosek2018}, and that commit also contains the trained value network and timing pilot. RQ1 has no pre-specified test and is analysed descriptively. \Hone--\Hsix{} and RQ1--RQ4 belong to stage V1; the later stages have their own questions (Section~\ref{sec:followup}) and change no V1 verdict. We label analyses \emph{confirmatory} (\Hone--\Hsix{} by the pre-specified procedure), \emph{descriptive} (needed to interpret them) or \emph{exploratory} (computed after test outcomes were visible; never used to revise a verdict).
+
+\begin{table*}[t]
+\centering
+\caption{Pre-specified hypotheses, criteria and outcomes (stage V1, test split). Details are in Section~\ref{sec:results}.}
+\label{tab:hyp}
+\small
+\begin{tabular}{@{}p{0.5cm}p{5.0cm}p{6.2cm}p{4.2cm}@{}}
+\toprule
+ & Pre-specified criterion & Observed & Verdict \\
+\midrule
+\Hone & AUROC of confidence for ``good move'' (CPL $\le 25$) $>0.5$ with CI excluding 0.5, and above the 1/\#legal-moves baseline & AUROC \aucConf{} [\aucConfLo, \aucConfHi]; baseline \aucBase{}; difference \aucDiff{} [\aucDiffLo, \aucDiffHi] & Partly supported \\
+\Htwo & Gate ACPL $<$ matched random-gate ACPL at 25\% and 50\% search; one-sided paired bootstrap, Holm-corrected & Advantage \advTf{} [\advTfLo, \advTfHi]\cp\ (25\%), \advFifty{} [\advFiftyLo, \advFiftyHi]\cp\ (50\%); Holm $p=\holmTwentyFive$, $\holmFifty$ & Not supported \\
+\Hthree & $R\ge0.5$ using $\le50\%$ of \ag{always_s2}'s search compute & $R=\RFifty$ [\RFiftyLo, \RFiftyHi] at \shareFifty\% of search time; random gate expects $R=\randRFifty$ & Not supported \\
+\Hfour & Blunder rate in the lowest-confidence quartile exceeds that in the highest & \qOne\% vs.\ \qFour\%; ratio \qRatio{} [\qRatioLo, \qRatioHi] & Contradicted \\
+\Hfive & Search trigger rate higher on puzzles than on game positions & \trigPuz\% vs.\ \trigGames\% & Contradicted \\
+\Hsix & \ag{hybrid_s2_50} has higher Elo than \ag{laya_only} & Difference \eDHL{} [\eDHLLo, \eDHLHi] & Not supported \\
+\bottomrule
+\end{tabular}
+\end{table*}

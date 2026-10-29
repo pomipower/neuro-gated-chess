@@ -36,7 +36,7 @@ GAME_COLS = ["run_id", "game_id", "opening_id", "white", "black", "result", "pli
              "white_error", "black_error"]
 MOVE_COLS = ["game_id", "ply", "agent", "move_uci", "fen_before", "system", "confidence", "time_elapsed_ms",
              "laya_ms", "search_ms", "laya_calls", "laya_moves_scored", "cnn_evals", "mcts_sims", "max_depth",
-             "mean_leaf_depth"]
+             "mean_leaf_depth", "critical", "safety_override", "rep_avoided", "special"]   # last four: v2 agents only
 
 
 def parse_args() -> argparse.Namespace:
@@ -47,6 +47,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--agents", default=None, help="comma list; overrides the tier's agents")
     p.add_argument("--vs", default=None, help="comma list of opponents for --agents (default: anchors)")
     p.add_argument("--pilot", action="store_true")
+    p.add_argument("--openings-file", default=None,
+                   help="openings CSV inside benchmark_dir (default openings.csv; v2 practice: openings_dev.csv)")
+    p.add_argument("--max-openings", type=int, default=None)
     p.add_argument("--judge-moves", action="store_true", help="judge moves.csv of --run-id and exit")
     return p.parse_args()
 
@@ -121,6 +124,9 @@ def judge_moves(cfg: dict[str, Any], out_dir: Path) -> None:
 
 def append_rows(path: Path, cols: list[str], rows: list[dict[str, Any]]) -> None:
     new = not path.exists()
+    if not new:                                   # keep an existing file's header (older runs have fewer columns)
+        with open(path, newline="") as fh:
+            cols = next(csv.reader(fh), cols)
     with open(path, "a", newline="") as fh:
         wr = csv.DictWriter(fh, fieldnames=cols, extrasaction="ignore")
         if new:
@@ -138,7 +144,9 @@ def main() -> None:
     if args.judge_moves:
         judge_moves(cfg, out_dir)
         return
-    openings = pd.read_csv(resolve(cfg["data"]["benchmark_dir"]) / "openings.csv")
+    openings = pd.read_csv(resolve(cfg["data"]["benchmark_dir"]) / (args.openings_file or "openings.csv"))
+    if args.max_openings:
+        openings = openings.head(args.max_openings)
     if args.pilot:
         openings = openings.head(2)
     pairs = pairings(cfg, args.tier, args.agents, args.vs)

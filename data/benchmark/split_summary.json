@@ -1,0 +1,30 @@
+{
+  "train_months": [
+    "2025-04",
+    "2025-05",
+    "2025-06",
+    "2025-07",
+    "2025-08",
+    "2025-09"
+  ],
+  "val_month": "2025-10",
+  "test_month": "2025-11",
+  "seed": 1234,
+  "n_train": 500000,
+  "n_val_net": 20002,
+  "train_label_mean": 0.0597,
+  "positions_val": {
+    "n": 3000,
+    "opening": 600,
+    "middlegame": 1800,
+    "endgame": 600
+  },
+  "positions_test": {
+    "n": 3000,
+    "opening": 600,
+    "middlegame": 1800,
+    "endgame": 600
+  },
+  "n_openings": 25,
+  "n_puzzles": 1000
+}

@@ -1,0 +1,106 @@
+# Single source of truth for every hyperparameter. Copied into data/results/<run_id>/ with each run.
+# Do not hard-code any of these values in source files.
+
+seed: 1234
+
+data:
+  raw_dir: data/raw
+  processed_dir: data/processed
+  benchmark_dir: data/benchmark
+  # Lichess Elite Database monthly files (https://database.nikonoel.fr/). Fill in once downloaded.
+  # Use the three roles on DISJOINT months; the most recent months should be val and test.
+  train_months: ["2025-04", "2025-05", "2025-06", "2025-07", "2025-08", "2025-09"]
+  val_month: "2025-10"
+  test_month: "2025-11"
+  min_plies: 20
+  max_train_positions: 500000
+  n_val_net: 20000            # val positions for value-net early stopping
+  positions_per_game_train: 8
+  min_ply_train: 8
+  require_normal_termination: true
+
+label:
+  mode: outcome               # outcome | blend   (switch to blend if the Spearman check fails, protocol §5)
+  blend_lambda: 0.5           # y = lambda*z + (1-lambda)*tanh(cp/400)
+  sf_nodes: 50000             # Stockfish nodes for label generation in blend mode
+
+model:
+  planes: 18
+  channels: 128
+  res_blocks: 6
+  head_channels: 32
+  fc_hidden: 256
+  checkpoint: src/model/checkpoints/best_model.pt
+  color_flip_augmentation: true
+
+train:
+  epochs: 20
+  batch_size: 256
+  lr: 1.0e-3
+  weight_decay: 1.0e-3
+  scheduler: cosine
+  num_workers: 2
+  device: cuda                # falls back to cpu if unavailable
+
+laya:
+  model_name: datafreak/laya-chess
+  revision: null              # pin a Hugging Face commit hash once chosen
+  device: cuda
+  confidence: margin          # overwritten by configs/gate_frozen.yaml after calibration
+  temperature: 0.1
+  batch_size: 96              # move-question sequences per forward pass (LayaChess default; raise on a big GPU)
+  use_cache: false            # LayaChess caches positions; keep false so timed runs are comparable
+
+mcts:
+  simulations: 400            # raise to 800 only if the pilot timing allows
+  c_puct: 1.5
+  fpu_reduction: 0.2
+  prior_temperature: 0.05
+  tree_reuse: false
+
+judge:                        # Stockfish used to score moves (not a competitor)
+  path: stockfish
+  nodes: 200000
+  threads: 1
+  hash_mb: 128
+  multipv: 2
+  score_clip_cp: 1000
+  good_move_cpl: 25
+  mistake_cpl: 100
+  blunder_cpl: 200
+
+gate:
+  s2_rates: [0.10, 0.25, 0.50, 0.75]
+  random_control_rates: [0.25, 0.50]
+  random_control_seeds: 200   # how many random masks to average in the offline composition
+
+benchmark:
+  n_val: 3000
+  n_test: 3000
+  max_per_game: 3
+  ply_range: [10, 120]
+  opening_fraction: 0.20
+  endgame_fraction: 0.20
+  endgame_material_max: 20    # combined N/B=3, R=5, Q=9 for both sides
+  bootstrap_resamples: 2000
+
+tournament:
+  n_openings: 25
+  opening_plies: 8
+  opening_eval_band_cp: 100
+  max_plies: 300
+  anchors:                    # set after the pilot (protocol §3); UCI_Elo range is 1320-3190
+    elos: [1500, 1700, 1900]
+    movetime_ms: 100
+    threads: 1
+    hash_mb: 64
+  tier1_agents: [laya_only, hybrid_s2_50, always_s2, mcts_uniform]
+  bootstrap_resamples: 1000
+  offscale_high: 0.90
+  offscale_low: 0.10
+
+puzzles:
+  per_bucket: 200
+  buckets: [[0, 1200], [1200, 1600], [1600, 2000], [2000, 2400], [2400, 4000]]
+
+results_dir: data/results

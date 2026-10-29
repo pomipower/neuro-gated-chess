@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Play the Neuro-Gated Bot</title>
+<style>
+  :root {
+    --bg: #14181f; --panel: #1c222b; --panel2: #232a35; --ink: #eef1f5; --muted: #9aa6b4; --line: #2e3744;
+    --light: #e9e2d0; --dark: #8a9bb0; --blue: #4d8ff0; --orange: #e8893c; --green: #3fb97a; --red: #e5534b; --grey: #b4bcc6;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { padding: 14px 24px; border-bottom: 1px solid var(--line); display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+  header h1 { font-size: 20px; margin: 0; }
+  header span { color: var(--muted); font-size: 14px; }
+  main { display: grid; grid-template-columns: minmax(320px, 600px) minmax(360px, 1fr); gap: 24px; padding: 20px 24px; align-items: start; }
+  @media (max-width: 980px) { main { grid-template-columns: 1fr; } }
+  .boardwrap { position: relative; width: 100%; aspect-ratio: 1; border-radius: 6px; overflow: hidden; box-shadow: 0 6px 24px rgba(0,0,0,.35); }
+  #board { display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); width: 100%; height: 100%; }
+  .sq { position: relative; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; }
+  .sq.l { background: var(--light); } .sq.d { background: var(--dark); }
+  .sq.last.l { background: #e3d38a; } .sq.last.d { background: #b2a75e; }
+  .sq.sel { box-shadow: inset 0 0 0 4px var(--blue); }
+  .sq.check { background: radial-gradient(circle, #ff5a4f 0%, #d93a30 45%, transparent 75%) !important; }
+  .sq img { width: 88%; height: 88%; pointer-events: none; }
+  .sq .dot { position: absolute; width: 28%; height: 28%; border-radius: 50%; background: rgba(20,24,31,.28); pointer-events: none; }
+  .sq .ring { position: absolute; inset: 4%; border-radius: 50%; border: 5px solid rgba(20,24,31,.28); pointer-events: none; }
+  .coord { position: absolute; font-size: 11px; font-weight: 600; opacity: .75; pointer-events: none; }
+  .coord.f { right: 4px; bottom: 2px; } .coord.r { left: 4px; top: 2px; }
+  .sq.l .coord { color: var(--dark); } .sq.d .coord { color: var(--light); }
+  #arrows { position: absolute; inset: 0; pointer-events: none; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; align-items: center; }
+  select, button { background: var(--panel2); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 7px 11px; font: inherit; }
+  button { cursor: pointer; } button:hover { border-color: var(--blue); }
+  button.primary { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 600; }
+  #status { margin-top: 12px; font-weight: 600; min-height: 22px; }
+  #status.thinking::after { content: ""; display: inline-block; width: 10px; height: 10px; margin-left: 8px; border-radius: 50%; background: var(--blue); animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: .2; } }
+  .moves { margin-top: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; max-height: 190px; overflow: auto; font-variant-numeric: tabular-nums; }
+  .moves span.m { display: inline-block; padding: 1px 5px; border-radius: 4px; margin-right: 2px; }
+  .moves span.bot { color: #9fc2ff; cursor: pointer; } .moves span.bot:hover { background: var(--panel2); }
+  .moves span.on { background: var(--blue); color: #fff; }
+  .moves .n { color: var(--muted); margin-right: 2px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; }
+  .panel h2 { margin: 0 0 4px; font-size: 22px; }
+  .sub { color: var(--muted); font-size: 13.5px; }
+  .chip { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12.5px; font-weight: 600; margin: 2px 4px 2px 0; background: var(--panel2); border: 1px solid var(--line); }
+  .chip.blue { background: rgba(77,143,240,.18); border-color: var(--blue); color: #bcd5ff; }
+  .chip.orange { background: rgba(232,137,60,.18); border-color: var(--orange); color: #ffd2ad; }
+  .chip.green { background: rgba(63,185,122,.18); border-color: var(--green); color: #b8f0d2; }
+  .chip.grey { color: var(--muted); }
+  .pipe { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 14px 0 6px; }
+  .step { border: 1px solid var(--line); border-radius: 7px; padding: 6px 6px; text-align: center; font-size: 12px; color: var(--muted); background: var(--bg); }
+  .step b { display: block; font-size: 12.5px; color: var(--ink); }
+  .step.on { border-color: var(--blue); background: rgba(77,143,240,.14); }
+  .step.warn { border-color: var(--orange); background: rgba(232,137,60,.14); }
+  .step.skip { opacity: .45; }
+  section.card { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+  section.card h3 { margin: 0 0 8px; font-size: 15px; display: flex; gap: 8px; align-items: center; }
+  section.card h3 .num { display: inline-flex; width: 22px; height: 22px; border-radius: 50%; align-items: center; justify-content: center; background: var(--panel2); font-size: 12px; }
+  .bars { display: grid; grid-template-columns: 76px 1fr 74px; gap: 5px 10px; align-items: center; font-variant-numeric: tabular-nums; }
+  .bars .lab { font-weight: 600; }
+  .bars .track { height: 14px; background: var(--bg); border-radius: 4px; overflow: hidden; }
+  .bars .fill { height: 100%; background: var(--grey); border-radius: 4px; }
+  .bars .fill.blue { background: var(--blue); } .bars .fill.green { background: var(--green); }
+  .bars .val { text-align: right; color: var(--muted); font-size: 13px; white-space: nowrap; }
+  .bars.wide { grid-template-columns: 76px 1fr 128px; }
+  .gauge { position: relative; height: 16px; background: linear-gradient(90deg, rgba(180,188,198,.25), rgba(77,143,240,.35)); border-radius: 4px; margin: 10px 0 18px; }
+  .gauge .thr { position: absolute; top: -5px; bottom: -5px; width: 2px; background: var(--ink); }
+  .gauge .thr span { position: absolute; top: 20px; left: -40px; width: 80px; text-align: center; font-size: 11px; color: var(--muted); }
+  .gauge .val { position: absolute; top: 2px; width: 12px; height: 12px; border-radius: 50%; margin-left: -6px; background: var(--orange); border: 2px solid var(--bg); }
+  .contrib { display: grid; grid-template-columns: 1fr 160px 56px; gap: 4px 10px; align-items: center; font-size: 13px; }
+  .contrib .axis { position: relative; height: 12px; background: var(--bg); border-radius: 3px; }
+  .contrib .axis i { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
+  .contrib .axis::after { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--muted); }
+  .pv { font-family: ui-monospace, Consolas, monospace; background: var(--bg); padding: 6px 9px; border-radius: 6px; display: inline-block; margin-top: 6px; }
+  .verdict { padding: 9px 12px; border-radius: 7px; margin-top: 4px; }
+  .verdict.ok { background: rgba(63,185,122,.12); border: 1px solid rgba(63,185,122,.5); }
+  .verdict.bad { background: rgba(232,137,60,.12); border: 1px solid rgba(232,137,60,.6); }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; font-size: 12.5px; color: var(--muted); }
+  .legend i { display: inline-block; width: 18px; height: 4px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
+  .empty { color: var(--muted); padding: 30px 0; text-align: center; }
+  .err { color: var(--red); margin-top: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Play the Neuro-Gated Bot</h1>
+  <span>Laya (System 1) + PUCT search (System 2) + a gate that decides when to think + a material safety net</span>
+</header>
+<main>
+  <div>
+    <div class="boardwrap"><div id="board"></div><svg id="arrows" viewBox="0 0 800 800"></svg></div>
+    <div id="status"></div>
+    <div class="controls">
+      <select id="color"><option value="white">I play White</option><option value="black">I play Black</option></select>
+      <select id="agent"></select>
+      <button class="primary" id="new">New game</button>
+      <button id="undo">Take back</button>
+      <button id="flip">Flip board</button>
+      <label class="sub">Promote to <select id="promo"><option value="q">Queen</option><option value="r">Rook</option><option value="b">Bishop</option><option value="n">Knight</option></select></label>
+    </div>
+    <div class="moves" id="moves"></div>
+    <div class="legend">
+      <span><i style="background:var(--grey)"></i>Laya's favourite</span>
+      <span><i style="background:var(--blue)"></i>search's choice</span>
+      <span><i style="background:var(--orange)"></i>vetoed by the safety net</span>
+      <span><i style="background:var(--green)"></i>move played</span>
+    </div>
+  </div>
+  <div class="panel" id="thought"><div class="empty">Make a move. The bot's reasoning for each of its moves appears here.</div></div>
+</main>
+<script>
+const FILES = "abcdefgh";
+let S = null, sel = null, flipped = false, shown = null, busy = false;
+const $ = id => document.getElementById(id);
+
+async function api(path, body) {
+  const r = await fetch(path, body === undefined ? {} : {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  const j = await r.json();
+  if (!r.ok && j.error) throw Object.assign(new Error(j.error), {state: j});
+  return j;
+}
+function parseFen(fen) {
+  const rows = fen.split(" ")[0].split("/"), map = {};
+  rows.forEach((row, i) => { let f = 0; for (const c of row) { if (/\d/.test(c)) f += +c; else { map[FILES[f] + (8 - i)] = c; f++; } } });
+  return map;
+}
+function sqXY(sq) { const f = FILES.indexOf(sq[0]), r = +sq[1] - 1; const col = flipped ? 7 - f : f, row = flipped ? r : 7 - r; return [col * 100 + 50, row * 100 + 50]; }
+
+function drawBoard() {
+  const b = $("board"); b.innerHTML = "";
+  const pos = parseFen(S.fen), last = S.last ? [S.last.slice(0, 2), S.last.slice(2, 4)] : [];
+  const targets = sel ? S.legal.filter(u => u.startsWith(sel)).map(u => u.slice(2, 4)) : [];
+  const turnK = S.check ? Object.keys(pos).find(k => pos[k] === (S.turn === "white" ? "K" : "k")) : null;
+  for (let row = 0; row < 8; row++) for (let col = 0; col < 8; col++) {
+    const f = flipped ? 7 - col : col, r = flipped ? row : 7 - row, sq = FILES[f] + (r + 1);
+    const d = document.createElement("div");
+    d.className = "sq " + ((f + r) % 2 ? "l" : "d") + (last.includes(sq) ? " last" : "") + (sel === sq ? " sel" : "") + (turnK === sq ? " check" : "");
+    const p = pos[sq];
+    if (p) { const img = document.createElement("img"); img.src = "/pieces/" + (p === p.toUpperCase() ? "w" : "b") + p.toUpperCase() + ".svg"; d.appendChild(img); }
+    if (targets.includes(sq)) { const t = document.createElement("div"); t.className = p ? "ring" : "dot"; d.appendChild(t); }
+    if (row === 7) { const c = document.createElement("span"); c.className = "coord f"; c.textContent = FILES[f]; d.appendChild(c); }
+    if (col === 0) { const c = document.createElement("span"); c.className = "coord r"; c.textContent = r + 1; d.appendChild(c); }
+    d.onclick = () => clickSq(sq, p);
+    b.appendChild(d);
+  }
+  drawArrows();
+}
+function arrow(from, to, color, dashed) {
+  const [x1, y1] = sqXY(from), [x2, y2] = sqXY(to), dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L;
+  const ex = x2 - ux * 30, ey = y2 - uy * 30, px = -uy, py = ux;
+  return `<line x1="${x1 + ux * 18}" y1="${y1 + uy * 18}" x2="${ex}" y2="${ey}" stroke="${color}" stroke-width="14" stroke-linecap="round" opacity=".82" ${dashed ? 'stroke-dasharray="22 16"' : ""}/>` +
+         `<polygon points="${x2 - ux * 8},${y2 - uy * 8} ${ex + px * 24},${ey + py * 24} ${ex - px * 24},${ey - py * 24}" fill="${color}" opacity=".88"/>`;
+}
+function drawArrows() {
+  const svg = $("arrows"); let html = "";
+  const th = shown !== null && S.thoughts[shown];
+  if (th && shown === lastBotPly()) {
+    const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+    const fin = th.move, seen = new Set([fin]);
+    if (th.safety && th.safety.override) { html += arrow(th.safety.top.slice(0, 2), th.safety.top.slice(2, 4), css("--orange"), true); seen.add(th.safety.top); }
+    if (th.search && !seen.has(th.search.best)) { html += arrow(th.search.best.slice(0, 2), th.search.best.slice(2, 4), css("--blue")); seen.add(th.search.best); }
+    if (th.laya && !seen.has(th.laya.best)) html += arrow(th.laya.best.slice(0, 2), th.laya.best.slice(2, 4), css("--grey"));
+    html += arrow(fin.slice(0, 2), fin.slice(2, 4), css("--green"));
+  }
+  svg.innerHTML = html;
+}
+function lastBotPly() { const k = Object.keys(S.thoughts).map(Number); return k.length ? Math.max(...k) : null; }
+
+async function clickSq(sq, piece) {
+  if (busy || !S || S.over) return;
+  const mine = piece && ((piece === piece.toUpperCase()) === (S.human === "white"));
+  if (sel && S.legal.some(u => u.startsWith(sel + sq))) {
+    let uci = sel + sq;
+    if (S.legal.includes(uci + "q")) uci += $("promo").value;
+    sel = null; await send("/api/move", {uci});
+  } else { sel = mine && S.legal.some(u => u.startsWith(sq)) ? sq : null; drawBoard(); }
+}
+async function send(path, body) {
+  busy = true; setStatus(path === "/api/undo" ? "Taking back..." : "Bot is thinking...", true);
+  try { S = await api(path, body); $("err") && $("err").remove(); }
+  catch (e) { if (e.state) S = e.state; showErr(e.message); }
+  busy = false; shown = lastBotPly(); render();
+}
+function showErr(m) { let e = $("err"); if (!e) { e = document.createElement("div"); e.id = "err"; e.className = "err"; $("status").after(e); } e.textContent = m; }
+function setStatus(t, thinking) { const s = $("status"); s.textContent = t; s.className = thinking ? "thinking" : ""; }
+
+function render() {
+  $("agent").innerHTML = S.agents.map(a => `<option ${a === S.agent ? "selected" : ""}>${a}</option>`).join("");
+  drawBoard(); renderMoves(); renderThought();
+  if (S.over) setStatus(`Game over: ${S.result} (${S.termination})`);
+  else setStatus(S.turn === S.human ? "Your move" + (S.check ? " (you are in check)" : "") : "Bot to move");
+}
+function renderMoves() {
+  let h = "", startBlack = false;
+  S.sans.forEach((san, i) => {
+    const ply = i, white = ply % 2 === 0;
+    if (white) h += `<span class="n">${ply / 2 + 1}.</span>`;
+    else if (i === 0) h += `<span class="n">1...</span>`;
+    const bot = S.thoughts[ply] !== undefined;
+    h += `<span class="m ${bot ? "bot" : ""} ${bot && ply === shown ? "on" : ""}" data-ply="${ply}">${san}</span> `;
+  });
+  $("moves").innerHTML = h || '<span class="sub">No moves yet.</span>';
+  $("moves").querySelectorAll("span.bot").forEach(el => el.onclick = () => { shown = +el.dataset.ply; renderMoves(); renderThought(); drawArrows(); });
+  $("moves").scrollTop = 1e6;
+}
+const pct = x => (100 * x).toFixed(1) + "%";
+function bars(rows, playedIdx, cls, wide) {
+  const max = Math.max(...rows.map(r => r[1]), 1e-9);
+  return `<div class="bars${wide ? " wide" : ""}">` + rows.map((r, i) => `<div class="lab">${r[0]}${i === playedIdx ? " ✓" : ""}</div><div class="track"><div class="fill ${i === playedIdx ? "green" : cls}" style="width:${(100 * r[1] / max).toFixed(1)}%"></div></div><div class="val">${r[2]}</div>`).join("") + `</div>`;
+}
+function renderThought() {
+  const el = $("thought"), th = shown !== null ? S.thoughts[shown] : null;
+  if (!th) { el.innerHTML = '<div class="empty">Make a move. The bot\'s reasoning for each of its moves appears here.</div>'; return; }
+  const sys = th.special === "tablebase" ? ["tablebase", "green"] : th.special === "mate1" ? ["mate in one", "green"] : th.system === 2 ? ["searched (System 2)", "blue"] : ["instinct (System 1)", "grey"];
+  let h = `<h2>Bot played ${th.san}</h2><div class="sub">move ${Math.floor(th.ply / 2) + 1}${th.ply % 2 ? " (Black)" : " (White)"} · decided in ${th.ms} ms` +
+          (th.laya_ms ? ` · Laya ${th.laya_ms} ms` : "") + (th.search_ms ? ` · search ${th.search_ms} ms` : "") + `</div>`;
+  h += `<div style="margin-top:8px"><span class="chip ${sys[1]}">${sys[0]}</span>` + (th.safety && th.safety.override ? `<span class="chip orange">safety net overrode</span>` : "") +
+       (th.contempt ? `<span class="chip orange">avoided a repetition</span>` : "") + (th.consistent === false ? `<span class="chip orange">explanation differs from played move</span>` : "") + `</div>`;
+  const g = th.gate || {};
+  const steps = [["Shortcut", th.special ? "on" : "skip", th.special || "none"], ["Laya", th.laya ? "on" : "skip", th.laya ? "scored " + th.laya.n : "-"],
+                 ["Gate", th.laya ? (g.searched ? "on" : "") : "skip", th.laya ? (g.searched ? "search" : "trust Laya") : "-"],
+                 ["Search", th.search ? "on" : "skip", th.search ? th.search.sims + " sims" : "skipped"],
+                 ["Contempt", th.contempt ? "warn" : "skip", th.contempt ? "changed" : "no"],
+                 ["Safety net", th.safety ? (th.safety.override ? "warn" : "on") : "skip", th.safety ? (th.safety.override ? "veto" : "ok") : "-"]];
+  h += `<div class="pipe">` + steps.map(s => `<div class="step ${s[1]}"><b>${s[0]}</b>${s[2]}</div>`).join("") + `</div>`;
+  if (th.special) {
+    h += `<section class="card"><h3>Shortcut</h3><div>${th.special === "tablebase" ? "Five or fewer pieces: the move was looked up in the Syzygy endgame tablebase (perfect play), so Laya and the search were not needed." : "A move gives checkmate, so it was played at once."}</div></section>`;
+  }
+  if (th.laya) {
+    const L = th.laya, played = L.top.findIndex(r => r[0] === th.move);
+    h += `<section class="card"><h3><span class="num">1</span>System 1: Laya's intuition</h3>` +
+         `<div class="sub" style="margin-bottom:8px">Win chance after each move (bot's side). Confidence ${L.confidence.toFixed(3)} · ${L.n} moves scored in ${L.ms} ms. Laya's favourite: <b>${L.best_san}</b>.</div>` +
+         bars(L.top.map(r => [r[1], r[2], pct(r[2])]), played, "") + `</section>`;
+  }
+  if (th.laya) {
+    h += `<section class="card"><h3><span class="num">2</span>The gate: think or not?</h3>`;
+    if (g.kind === "learned") {
+      const lo = Math.min(g.score, g.threshold) - 1.5, hi = Math.max(g.score, g.threshold) + 1.5, P = v => (100 * (v - lo) / (hi - lo)).toFixed(1) + "%";
+      h += `<div>Learned gate (V3): search score <b>${g.score.toFixed(2)}</b> vs threshold <b>${g.threshold.toFixed(2)}</b> → <b>${g.searched ? "search" : "trust Laya"}</b>.</div>` +
+           `<div class="gauge"><div class="thr" style="left:${P(g.threshold)}"><span>threshold</span></div><div class="val" style="left:${P(g.score)}"></div></div>` +
+           `<div class="sub" style="margin-bottom:6px">What moved the score (positive = towards searching):</div><div class="contrib">` +
+           g.contrib.map(c => { const w = Math.min(50, Math.abs(c[2]) * 25); return `<div>${c[0]} <span class="sub">(${c[1]})</span></div><div class="axis"><i style="${c[2] >= 0 ? `left:50%;width:${w}%;background:var(--blue)` : `left:${50 - w}%;width:${w}%;background:var(--orange)`}"></i></div><div class="val" style="text-align:right">${c[2] > 0 ? "+" : ""}${c[2].toFixed(2)}</div>`; }).join("") + `</div>`;
+    } else if (g.kind === "critical") {
+      h += `<div>Sharp-position rules (V2): ${g.critical ? "the position is <b>critical</b>, so search" : "nothing critical, so trust Laya"}${g.sims ? ` (${g.sims} simulations)` : ""}.</div>`;
+    } else if (g.kind === "never") { h += `<div>This agent never searches.</div>`; }
+    else if (g.kind === "always") { h += `<div>This agent always searches.</div>`; }
+    else { h += `<div>No gate for this agent.</div>`; }
+    if (g.flags) h += `<div style="margin-top:8px">` + Object.entries(g.flags).map(([k, v]) => `<span class="chip ${v ? "blue" : "grey"}">${k.replace("_", " ")}: ${v ? "yes" : "no"}</span>`).join("") + `</div>`;
+    h += `</section>`;
+  }
+  if (th.search) {
+    const s = th.search, played = s.visits.findIndex(r => r[0] === th.move);
+    h += `<section class="card"><h3><span class="num">3</span>System 2: the search</h3>` +
+         `<div class="sub" style="margin-bottom:8px">${s.sims} simulations, ${s.cnn_evals} value-net evaluations, deepest line ${s.depth} plies. Share of simulations per move, and its value (win chance) for the bot:</div>` +
+         bars(s.visits.map(r => [r[1], r[3], `${pct(r[3])} · ${pct((r[4] + 1) / 2)}`]), played, "blue", true) +
+         `<div style="margin-top:8px" class="sub">Line the search expects:</div><div class="pv">${s.pv.join(" ") || "-"}</div></section>`;
+  }
+  if (th.contempt) {
+    h += `<section class="card"><h3><span class="num">4</span>Contempt</h3><div class="verdict bad">The bot thinks it is better, and <b>${th.contempt.avoided}</b> would repeat an earlier position (heading for a draw), so it switched to <b>${th.contempt.chosen}</b>.</div></section>`;
+  }
+  if (th.safety) {
+    const F = th.safety, loss = F.best_score - F.top_score;
+    h += `<section class="card"><h3><span class="num">${th.contempt ? 5 : 4}</span>Safety net: does the move lose material?</h3>` +
+         (F.override ? `<div class="verdict bad"><b>Vetoed ${F.top_san}</b>: a short material search shows it ends ${loss} cp worse than the best option (limit ${F.margin} cp). Played <b>${F.final_san}</b> instead.</div>`
+                     : `<div class="verdict ok"><b>${F.top_san}</b> passes: material after a 2-ply search plus captures is ${F.top_score - F.now >= 0 ? "+" : ""}${F.top_score - F.now} cp from now, within ${F.margin} cp of the best option.</div>`) +
+         `<div class="sub" style="margin-top:8px">Material outcomes checked (cp, bot's side): ${F.scores.map(r => `${r[0]} ${r[1] - F.now >= 0 ? "+" : ""}${r[1] - F.now}`).join(" · ")}</div></section>`;
+  }
+  if (th.note) h += `<div class="sub" style="margin-top:10px">${th.note}</div>`;
+  el.innerHTML = h;
+}
+
+$("new").onclick = () => { flipped = $("color").value === "black"; sel = null; send("/api/new", {color: $("color").value, agent: $("agent").value}); };
+$("undo").onclick = () => { sel = null; send("/api/undo", {}); };
+$("flip").onclick = () => { flipped = !flipped; drawBoard(); };
+api("/api/state").then(j => { S = j; flipped = S.human === "black"; $("color").value = S.human; shown = lastBotPly(); render(); });
+</script>
+</body>
+</html>

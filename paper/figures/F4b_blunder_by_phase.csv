@@ -1,0 +1,13 @@
+agent,phase,blunder_rate,n
+laya_only,opening,0.05,600
+laya_only,middlegame,0.21666666666666667,1800
+laya_only,endgame,0.165,600
+always_s2,opening,0.04833333333333333,600
+always_s2,middlegame,0.21222222222222223,1800
+always_s2,endgame,0.14666666666666667,600
+hybrid_s2_50,opening,0.04666666666666667,600
+hybrid_s2_50,middlegame,0.21555555555555556,1800
+hybrid_s2_50,endgame,0.15666666666666668,600
+random_matched_50,opening,0.04904166666666667,600
+random_matched_50,middlegame,0.21429722222222222,1800
+random_matched_50,endgame,0.155225,600
